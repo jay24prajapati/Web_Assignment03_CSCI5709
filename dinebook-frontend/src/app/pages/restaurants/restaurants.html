@@ -1,0 +1,102 @@
+<div class="restaurants-page">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-text">
+          <h1 class="page-title">Discover Restaurants</h1>
+          <p class="page-description">
+            Explore our curated selection of amazing restaurants and book your perfect dining experience.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button mat-raised-button color="primary" (click)="bookTable()" class="quick-book-btn">
+            <mat-icon>restaurant</mat-icon>
+            Quick Book
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Restaurants Grid -->
+    <div class="restaurants-content">
+      <div class="restaurants-grid">
+        <div class="restaurant-card" *ngFor="let restaurant of mockRestaurants">
+            
+          <div class="restaurant-image">
+            <img src="https://cdn.pixabay.com/photo/2019/09/12/15/21/resort-4471852_1280.jpg" alt="Rooftop Restaurant" />
+            <div class="image-overlay">
+              <button mat-icon-button class="favorite-btn" [attr.aria-label]="'Add ' + restaurant.name + ' to favorites'">
+                <mat-icon>favorite_border</mat-icon>
+              </button>
+            </div>
+            <div class="restaurant-badge" [ngClass]="restaurant.badgeClass">
+              {{ restaurant.badge }}
+            </div>
+          </div>
+          <div class="restaurant-info">
+            <div class="restaurant-header">
+                
+              <h3 class="restaurant-name">{{ restaurant.name }}</h3>
+              <span class="price-indicator">{{ restaurant.priceRange }}</span>
+            </div>
+            <p class="restaurant-cuisine">{{ restaurant.cuisine }}</p>
+            <div class="restaurant-rating">
+              <div class="stars">
+                <mat-icon *ngFor="let star of restaurant.stars" class="star-icon">
+                  {{ star }}
+                </mat-icon>
+              </div>
+              <span class="rating-text">{{ restaurant.rating }} ({{ restaurant.reviews }} reviews)</span>
+            </div>
+            <div class="restaurant-details">
+              <div class="detail-item">
+                <mat-icon class="detail-icon">location_on</mat-icon>
+                <span>{{ restaurant.location }}</span>
+              </div>
+              <div class="detail-item">
+                <mat-icon class="detail-icon">access_time</mat-icon>
+                <span>{{ restaurant.timing }}</span>
+              </div>
+            </div>
+            <div class="restaurant-actions">
+              <button mat-button class="view-menu-btn">
+                <mat-icon>menu_book</mat-icon>
+                View Menu
+              </button>
+              <button mat-button class="view-menu-btn" (click)="bookTable()" class="book-btn">
+                <mat-icon>event_available</mat-icon>
+                Book Table
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="cta-section">
+        <div class="cta-card">
+          <div class="cta-content">
+            <div class="cta-icon">
+              <mat-icon class="large-icon">restaurant_menu</mat-icon>
+            </div>
+            <h2 class="cta-title">Ready to Book Your Table?</h2>
+            <p class="cta-description">
+              Join thousands of food lovers who trust DineBook for their dining experiences. 
+              Sign in to book tables instantly or create an account to get started.
+            </p>
+            <div class="cta-actions">
+              <button mat-raised-button color="primary" (click)="bookTable()" class="cta-button primary">
+                <mat-icon>restaurant</mat-icon>
+                Book a Table Now
+              </button>
+              <button mat-button routerLink="/about" class="cta-button secondary">
+                <mat-icon>info</mat-icon>
+                Learn More
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

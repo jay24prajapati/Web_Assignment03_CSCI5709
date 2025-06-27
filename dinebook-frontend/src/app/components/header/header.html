@@ -1,0 +1,102 @@
+<header class="header" role="banner">
+  <div class="container">
+    <div class="header-content">
+      <!-- Logo Section -->
+      <div class="logo-section">
+        <a routerLink="/landing" class="logo-link" aria-label="DineBook Home">
+          <span class="logo-text">DineBook</span>
+        </a>
+      </div>
+      
+      <!-- Navigation Section -->
+      <nav class="nav-desktop" role="navigation" aria-label="Main navigation">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a routerLink="/landing" 
+               routerLinkActive="active" 
+               [routerLinkActiveOptions]="{exact: true}"
+               class="nav-link">
+              Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a routerLink="/restaurants" 
+               routerLinkActive="active" 
+               class="nav-link">
+              Restaurants
+            </a>
+          </li>
+          <!-- Dashboard link. This is only visible when logged in -->
+          <li class="nav-item" *ngIf="authService.isLoggedIn$ | async">
+            <a routerLink="/dashboard" 
+               routerLinkActive="active" 
+               class="nav-link">
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a routerLink="/about" 
+               routerLinkActive="active" 
+               class="nav-link">
+              About
+            </a>
+          </li>
+          <li class="nav-item">
+            <a routerLink="/contact" 
+               routerLinkActive="active" 
+               class="nav-link">
+              Contact
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <!-- Authentication Section -->
+      <div class="auth-section">
+        <ng-container *ngIf="authService.isLoggedIn$ | async; else loggedOutTemplate">
+          <!-- Logged in state -->
+          <div class="user-menu">
+            <span class="welcome-text">Welcome back!</span>
+<button 
+  mat-flat-button 
+  class="logout-btn" 
+  (click)="authService.logout()"
+  aria-label="Sign out of your account">
+  <img src="https://cdn-icons-png.flaticon.com/512/17578/17578369.png" alt="logout" />
+  Sign Out
+</button>
+
+          </div>
+        </ng-container>
+        
+        <!-- Logged out state -->
+        <ng-template #loggedOutTemplate>
+          <div class="auth-buttons">
+            <button 
+              mat-button 
+              routerLink="/sign-in" 
+              class="login-btn"
+              aria-label="Sign in to your account">
+              Sign In
+            </button>
+            <button 
+              mat-raised-button 
+              color="primary" 
+              routerLink="/sign-up" 
+              class="login-btn"
+              aria-label="Create a new account">
+              Get Started
+            </button>
+          </div>
+        </ng-template>
+      </div>
+      
+      <!-- Mobile menu button -->
+      <button class="mobile-menu-btn" aria-label="Open mobile menu" aria-expanded="false">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+    </div>
+  </div>
+</header>

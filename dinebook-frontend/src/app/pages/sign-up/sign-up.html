@@ -1,0 +1,262 @@
+<div class="auth-page">
+  <div class="auth-container animate-fade-in">
+    <!-- Header Section -->
+    <div class="auth-header">
+      <div class="auth-logo">
+        <a routerLink="/landing" class="logo-link" aria-label="Back to home">
+          <span class="logo-text">DineBook</span>
+        </a>
+      </div>
+      <div class="auth-title-section">
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-subtitle">Join DineBook and start discovering amazing restaurants near you</p>
+      </div>
+    </div>
+    
+    <!-- Sign Up Form -->
+    <div class="auth-form-container">
+      <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()" class="auth-form" novalidate>
+        <!-- Name Field -->
+        <div class="form-group">
+          <div class="field-container">
+            <mat-form-field 
+              appearance="outline" 
+              class="custom-form-field"
+              [class.field-valid]="signUpForm.get('name')?.valid && signUpForm.get('name')?.touched">
+              <mat-label>Full name</mat-label>
+              <input 
+                matInput 
+                formControlName="name" 
+                placeholder="Enter your full name"
+                autocomplete="name"
+                [attr.aria-describedby]="getNameErrorId()">
+              <mat-icon matSuffix class="field-icon">person</mat-icon>
+            </mat-form-field>
+            
+            <!-- Custom Error Messages -->
+            <div class="field-messages" [attr.id]="getNameErrorId()" role="alert" aria-live="polite">
+              <div *ngIf="signUpForm.get('name')?.hasError('required') && signUpForm.get('name')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Full name is required</span>
+              </div>
+              <div *ngIf="signUpForm.get('name')?.valid && signUpForm.get('name')?.touched" 
+                   class="success-message">
+                <mat-icon class="message-icon">check_circle</mat-icon>
+                <span>Name looks good</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Email Field -->
+        <div class="form-group">
+          <div class="field-container">
+            <mat-form-field 
+              appearance="outline" 
+              class="custom-form-field"
+              [class.field-valid]="signUpForm.get('email')?.valid && signUpForm.get('email')?.touched">
+              <mat-label>Email address</mat-label>
+              <input 
+                matInput 
+                formControlName="email" 
+                type="email" 
+                placeholder="Enter your email address"
+                autocomplete="email"
+                [attr.aria-describedby]="getEmailErrorId()">
+              <mat-icon matSuffix class="field-icon">alternate_email</mat-icon>
+            </mat-form-field>
+            
+            <!-- Custom Error Messages -->
+            <div class="field-messages" [attr.id]="getEmailErrorId()" role="alert" aria-live="polite">
+              <div *ngIf="signUpForm.get('email')?.hasError('required') && signUpForm.get('email')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Email address is required</span>
+              </div>
+              <div *ngIf="signUpForm.get('email')?.hasError('email') && signUpForm.get('email')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Please enter a valid email address</span>
+              </div>
+              <div *ngIf="signUpForm.get('email')?.valid && signUpForm.get('email')?.touched" 
+                   class="success-message">
+                <mat-icon class="message-icon">check_circle</mat-icon>
+                <span>Email looks good</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Password Field -->
+        <div class="form-group">
+          <div class="field-container">
+            <mat-form-field 
+              appearance="outline" 
+              class="custom-form-field"
+              [class.field-valid]="signUpForm.get('password')?.valid && signUpForm.get('password')?.touched">
+              <mat-label>Password</mat-label>
+              <input 
+                matInput 
+                formControlName="password" 
+                [type]="hidePassword ? 'password' : 'text'"
+                placeholder="Create a secure password"
+                autocomplete="new-password"
+                [attr.aria-describedby]="getPasswordErrorId()">
+              <button 
+                mat-icon-button 
+                matSuffix 
+                type="button"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'"
+                class="password-toggle">
+                <mat-icon>{{hidePassword ? 'visibility' : 'visibility_off'}}</mat-icon>
+              </button>
+            </mat-form-field>
+            
+            <div class="password-strength" *ngIf="signUpForm.get('password')?.value">
+              <div class="strength-bar">
+                <div class="strength-fill" [ngClass]="getPasswordStrengthClass()"></div>
+              </div>
+              <span class="strength-text">{{ getPasswordStrengthText() }}</span>
+            </div>
+            
+            <!-- Custom Error Messages -->
+            <div class="field-messages" [attr.id]="getPasswordErrorId()" role="alert" aria-live="polite">
+              <div *ngIf="signUpForm.get('password')?.hasError('required') && signUpForm.get('password')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Password is required</span>
+              </div>
+              <div *ngIf="signUpForm.get('password')?.hasError('minlength') && signUpForm.get('password')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Password must be at least 6 characters long</span>
+              </div>
+              <div *ngIf="signUpForm.get('password')?.valid && signUpForm.get('password')?.touched" 
+                   class="success-message">
+                <mat-icon class="message-icon">check_circle</mat-icon>
+                <span>Password meets requirements</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Role Selection -->
+        <div class="form-group">
+          <div class="field-container">
+            <mat-form-field 
+              appearance="outline" 
+              class="custom-form-field"
+              [class.field-valid]="signUpForm.get('role')?.valid && signUpForm.get('role')?.touched">
+              <mat-label>Account type</mat-label>
+              <mat-select 
+                formControlName="role"
+                class="custom-select"
+                [attr.aria-describedby]="getRoleErrorId()">
+                <mat-option value="customer">
+                  <div class="role-option">
+                    <div class="role-info">
+                      <div class="role-title">Customer</div>
+                    </div>
+                  </div>
+                </mat-option>
+                <mat-option value="owner">
+                  <div class="role-option">
+                    <div class="role-info">
+                      <div class="role-title">Restaurant Owner</div>
+                    </div>
+                  </div>
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix class="field-icon">business</mat-icon>
+            </mat-form-field>
+            
+            <!-- Custom Error Messages -->
+            <div class="field-messages" [attr.id]="getRoleErrorId()" role="alert" aria-live="polite">
+              <div *ngIf="signUpForm.get('role')?.hasError('required') && signUpForm.get('role')?.touched" 
+                   class="error-message">
+                <mat-icon class="message-icon">error_outline</mat-icon>
+                <span>Please select an account type</span>
+              </div>
+              <div *ngIf="signUpForm.get('role')?.valid && signUpForm.get('role')?.touched" 
+                   class="success-message">
+                <mat-icon class="message-icon">check_circle</mat-icon>
+                <span>Account type selected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="terms-section">
+            <mat-checkbox class="custom-checkbox" color="primary" required>
+              <span class="terms-text">
+                I agree to the 
+                <a href="#" class="terms-link">Terms of Service</a> 
+                and 
+                <a href="#" class="terms-link">Privacy Policy</a>
+              </span>
+            </mat-checkbox>
+          </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="form-actions">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="submit" 
+            [disabled]="signUpForm.invalid || isLoading"
+            class="submit-button"
+            [attr.aria-describedby]="isLoading ? 'loading-status' : null">
+            <div class="button-content">
+              <mat-spinner 
+                *ngIf="isLoading" 
+                diameter="20" 
+                class="button-spinner"
+                aria-hidden="true"></mat-spinner>
+              <mat-icon *ngIf="!isLoading" class="button-icon">person_add</mat-icon>
+              <span class="button-text">
+                {{ isLoading ? 'Creating account...' : 'Create Account' }}
+              </span>
+            </div>
+          </button>
+          <div id="loading-status" class="sr-only" aria-live="polite">
+            {{ isLoading ? 'Creating account, please wait' : '' }}
+          </div>
+        </div>
+        
+        <!-- Success/Error Messages -->
+        <div *ngIf="errorMessage" 
+             [ngClass]="{'global-success-message': errorMessage.includes('successful'), 'global-error-message': !errorMessage.includes('successful')}"
+             role="alert" 
+             aria-live="assertive">
+          <div class="message-content">
+            <mat-icon class="message-icon">
+              {{ errorMessage.includes('successful') ? 'check_circle' : 'warning' }}
+            </mat-icon>
+            <div class="message-text">
+              <strong>{{ errorMessage.includes('successful') ? 'Account created successfully!' : 'Registration failed' }}</strong>
+              <p>{{ errorMessage }}</p>
+            </div>
+          </div>
+        </div>
+      </form>
+      
+      <!-- Footer -->
+      <div class="auth-footer">
+        <div class="divider">
+          <span class="divider-text">Already have an account?</span>
+        </div>
+        <div class="footer-action">
+          <p class="footer-text">Sign in to access your existing DineBook account</p>
+          <a routerLink="/sign-in" class="auth-link">
+            <span>Sign in here</span>
+            <mat-icon class="link-icon">arrow_forward</mat-icon>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
