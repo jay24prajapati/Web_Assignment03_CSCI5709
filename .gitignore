@@ -1,0 +1,95 @@
+# Frontend
+dinebook-frontend/node_modules/
+dinebook-frontend/dist/
+dinebook-frontend/tmp/
+dinebook-frontend/out-tsc/
+dinebook-frontend/bazel-out/
+dinebook-frontend/npm-debug.log
+dinebook-frontend/yarn-error.log
+
+# Angular cache and coverage
+dinebook-frontend/.angular/cache/
+dinebook-frontend/.sass-cache/
+dinebook-frontend/connect.lock
+dinebook-frontend/coverage/
+dinebook-frontend/libpeerconnection.log
+dinebook-frontend/testem.log
+dinebook-frontend/typings/
+
+# IDE settings
+dinebook-frontend/.idea/
+dinebook-frontend/.project
+dinebook-frontend/.classpath
+dinebook-frontend/.c9/
+dinebook-frontend/*.launch
+dinebook-frontend/.settings/
+dinebook-frontend/*.sublime-workspace
+dinebook-frontend/.vscode/*
+!dinebook-frontend/.vscode/settings.json
+!dinebook-frontend/.vscode/tasks.json
+!dinebook-frontend/.vscode/launch.json
+!dinebook-frontend/.vscode/extensions.json
+dinebook-frontend/.history/
+
+# Backend
+dinebook-backend/node_modules/
+dinebook-backend/.env
+dinebook-backend/package-lock.json
+dinebook-backend/package.json
+
+# Shared Binary/Object/Compiled Files
+dinebook-frontend/**/*.com
+dinebook-frontend/**/*.class
+dinebook-frontend/**/*.dll
+dinebook-frontend/**/*.exe
+dinebook-frontend/**/*.o
+dinebook-frontend/**/*.so
+dinebook-backend/**/*.com
+dinebook-backend/**/*.class
+dinebook-backend/**/*.dll
+dinebook-backend/**/*.exe
+dinebook-backend/**/*.o
+dinebook-backend/**/*.so
+
+# hared Packages/Archives 
+dinebook-frontend/**/*.7z
+dinebook-frontend/**/*.dmg
+dinebook-frontend/**/*.gz
+dinebook-frontend/**/*.iso
+dinebook-frontend/**/*.jar
+dinebook-frontend/**/*.rar
+dinebook-frontend/**/*.tar
+dinebook-frontend/**/*.zip
+dinebook-backend/**/*.7z
+dinebook-backend/**/*.dmg
+dinebook-backend/**/*.gz
+dinebook-backend/**/*.iso
+dinebook-backend/**/*.jar
+dinebook-backend/**/*.rar
+dinebook-backend/**/*.tar
+dinebook-backend/**/*.zip
+
+# Shared Logs and Databases
+dinebook-frontend/**/*.log
+dinebook-frontend/**/*.sql
+dinebook-frontend/**/*.sqlite
+dinebook-backend/**/*.log
+dinebook-backend/**/*.sql
+dinebook-backend/**/*.sqlite
+
+# Shared OS related Files 
+dinebook-frontend/.DS_Store
+dinebook-frontend/.DS_Store?
+dinebook-frontend/._*
+dinebook-frontend/.Spotlight-V100
+dinebook-frontend/.Trashes
+dinebook-frontend/ehthumbs.db
+dinebook-frontend/Thumbs.db
+dinebook-backend/.DS_Store
+dinebook-backend/.DS_Store?
+dinebook-backend/._*
+dinebook-backend/.Spotlight-V100
+dinebook-backend/.Trashes
+dinebook-backend/ehthumbs.db
+dinebook-backend/Thumbs.db
+.DS_Store
