@@ -1,32 +1,30 @@
 import { Request, Response } from 'express';
-import { Db } from 'mongodb';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { User } from '../models/user';
+import { User } from '../models/';
 import { sendVerificationEmail } from '../utils/email';
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password, role, name } = req.body;
-  const db: Db = req.app.locals.db;
+  const { email, password, role = 'customer', name } = req.body;
 
   try {
-    const existingUser = await db.collection('users').findOne({ email });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ error: 'User already exists with this email' });
     }
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user: User = {
+    const user = new User({
       email,
       password: hashedPassword,
       role,
       name,
       isVerified: false,
       verificationToken,
-    };
-    await db.collection('users').insertOne(user);
+    });
+    await user.save();
 
     await sendVerificationEmail(email, verificationToken);
 
@@ -38,10 +36,9 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  const db: Db = req.app.locals.db;
 
   try {
-    const user = await db.collection('users').findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -69,15 +66,14 @@ export const login = async (req: Request, res: Response) => {
 
 export const verifyEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
-  const db: Db = req.app.locals.db;
 
   try {
-    const user = await db.collection('users').findOne({ verificationToken: token });
+    const user = await User.findOne({ verificationToken: token });
     if (!user) {
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
 
-    await db.collection('users').updateOne(
+    await User.updateOne(
       { _id: user._id },
       { $set: { isVerified: true }, $unset: { verificationToken: '' } }
     );
