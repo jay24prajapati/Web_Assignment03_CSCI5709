@@ -35,7 +35,7 @@ dinebook-frontend/.history/
 dinebook-backend/node_modules/
 dinebook-backend/.env
 dinebook-backend/package-lock.json
-dinebook-backend/package.json
+# dinebook-backend/package.json
 
 # Shared Binary/Object/Compiled Files
 dinebook-frontend/**/*.com
