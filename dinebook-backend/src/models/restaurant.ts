@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const restaurantSchema = new mongoose.Schema({
+export const restaurantSchema = new mongoose.Schema({
     _averageRating: {
         type: Number,
         default: 0

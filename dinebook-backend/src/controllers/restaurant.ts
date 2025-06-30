@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Restaurant } from "../models/";
 
-import type { AuthenticatedRequest, RestaurantQueryParams, CreateRestaurantBody } from "../types/restaurant";
+import type { AuthenticatedRequest, RestaurantQueryParams, CreateRestaurantBody } from "../types";
 
 /**
  * Get all restaurants with optional filtering and pagination
@@ -97,13 +97,13 @@ export const getRestaurantById = async (
  * Create a new restaurant
  */
 export const createRestaurant = async (
-    req: Request<{}, {}, CreateRestaurantBody>,
+    req: AuthenticatedRequest & Request<{}, {}, CreateRestaurantBody>,
     res: Response
 ): Promise<void> => {
     try {
         const restaurantData = {
             ...req.body,
-            // ownerId: req.user._id, TODO: fetch user ID from authenticated request
+            ownerId: req.user.id,
         };
 
         const restaurant = new Restaurant(restaurantData);

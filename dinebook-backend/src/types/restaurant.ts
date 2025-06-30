@@ -11,13 +11,6 @@ export enum CuisineType {
     Other = "Other",
 }
 
-export interface AuthenticatedRequest extends Request {
-    user: {
-        _id: string;
-        [key: string]: any;
-    };
-}
-
 // Interface for restaurant query parameters
 export interface RestaurantQueryParams {
     location?: string;
@@ -37,4 +30,19 @@ export interface CreateRestaurantBody {
     phoneNumber?: string;
     email?: string;
     capacity?: number;
+    openingHours?: {
+        monday?: { open: string; close: string };
+        tuesday?: { open: string; close: string };
+        wednesday?: { open: string; close: string };
+        thursday?: { open: string; close: string };
+        friday?: { open: string; close: string };
+        saturday?: { open: string; close: string };
+        sunday?: { open: string; close: string };
+    };
+    address?: {
+        street?: string;
+        city?: string;
+        province?: string;
+        postalCode?: string;
+    };
 }
