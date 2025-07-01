@@ -2,10 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { connectDB } from './config/db';
 import authRoutes from './routes/auth';
+import mongoose from 'mongoose';
 
 dotenv.config();
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dinebook';
+console.log('Connecting to MongoDB:', MONGODB_URI);
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,13 +29,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to DineBook Backend!' });
 });
 
-// Connect to MongoDB and start server
-connectDB().then((db) => {
-  app.locals.db = db;
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-}).catch(err => {
-  console.error('Failed to connect to MongoDB:', err);
-  process.exit(1);
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  console.log(`Access the API at http://localhost:${port}`);
 });
