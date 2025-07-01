@@ -8,11 +8,11 @@ import mongoose from 'mongoose';
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dinebook';
-console.log('🔗 Connecting to MongoDB:', MONGODB_URI);
+console.log('Connecting to MongoDB:', MONGODB_URI);
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch((error) => console.error('❌ MongoDB connection error:', error));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -31,6 +31,6 @@ app.get('/', (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`🚀 Server is running on port ${port}`);
-  console.log(`📍 Access the API at http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
+  console.log(`Access the API at http://localhost:${port}`);
 });
