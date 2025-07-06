@@ -7,6 +7,9 @@ import { DashboardComponent } from './pages/dashboard/dashboard';
 import { RestaurantsComponent } from './pages/restaurants/restaurants';
 import { AboutComponent } from './pages/about/about';
 import { ContactComponent } from './pages/contact/contact';
+import { BookTableComponent } from './pages/book-table/book-table';
+import { MyBookingsComponent } from './pages/my-bookings/my-bookings';
+import { BookingConfirmationComponent } from './components/booking-confirmation/booking-confirmation';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/landing', pathMatch: 'full' },
@@ -16,6 +19,10 @@ export const routes: Routes = [
   { path: 'verify', component: VerifyComponent },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'restaurants', component: RestaurantsComponent },
+  { path: 'book-table', component: BookTableComponent },
+  { path: 'book-table/:restaurantId', component: BookTableComponent },
+  { path: 'my-bookings', component: MyBookingsComponent },
+  { path: 'booking-confirmation/:bookingId', component: BookingConfirmationComponent },
   { path: 'about', component: AboutComponent },
   { path: 'contact', component: ContactComponent },
   { path: '**', redirectTo: '/landing' }

@@ -72,7 +72,21 @@ export class RestaurantsComponent {
 
   bookTable() {
     if (this.authService.isLoggedIn) {
-      alert("Table booking functionality")
+      this.router.navigate(["/book-table"])
+    } else {
+      this.router.navigate(["/sign-in"])
+    }
+  }
+
+  bookTableForRestaurant(restaurant: Restaurant) {
+    if (this.authService.isLoggedIn) {
+      this.router.navigate(["/book-table"], { 
+        queryParams: { 
+          restaurantName: restaurant.name,
+          cuisine: restaurant.cuisine,
+          location: restaurant.location 
+        } 
+      })
     } else {
       this.router.navigate(["/sign-in"])
     }

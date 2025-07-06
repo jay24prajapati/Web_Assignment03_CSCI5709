@@ -15,7 +15,10 @@ export class AuthService {
     return this.loggedIn.asObservable();
   }
 
-  login() {
+  login(token?: string) {
+    if (token) {
+      localStorage.setItem('token', token);
+    }
     this.loggedIn.next(true);
   }
 
@@ -23,5 +26,19 @@ export class AuthService {
     this.loggedIn.next(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem('token', token);
+    this.loggedIn.next(true);
+  }
+
+  removeToken(): void {
+    localStorage.removeItem('token');
+    this.loggedIn.next(false);
   }
 }

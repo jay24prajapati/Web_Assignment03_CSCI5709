@@ -33,6 +33,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to DineBook Backend!' });
 });
 
+
+
 // Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

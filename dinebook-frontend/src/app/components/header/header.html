@@ -1,14 +1,12 @@
 <header class="header" role="banner">
   <div class="container">
     <div class="header-content">
-      <!-- Logo Section -->
       <div class="logo-section">
         <a routerLink="/landing" class="logo-link" aria-label="DineBook Home">
           <span class="logo-text">DineBook</span>
         </a>
       </div>
       
-      <!-- Navigation Section -->
       <nav class="nav-desktop" role="navigation" aria-label="Main navigation">
         <ul class="nav-list">
           <li class="nav-item">
@@ -26,12 +24,25 @@
               Restaurants
             </a>
           </li>
-          <!-- Dashboard link. This is only visible when logged in -->
+          <li class="nav-item">
+            <a routerLink="/book-table" 
+               routerLinkActive="active" 
+               class="nav-link">
+              Book Table
+            </a>
+          </li>
           <li class="nav-item" *ngIf="authService.isLoggedIn$ | async">
             <a routerLink="/dashboard" 
                routerLinkActive="active" 
                class="nav-link">
               Dashboard
+            </a>
+          </li>
+          <li class="nav-item" *ngIf="authService.isLoggedIn$ | async">
+            <a routerLink="/my-bookings" 
+               routerLinkActive="active" 
+               class="nav-link">
+              My Bookings
             </a>
           </li>
           <li class="nav-item">
@@ -51,10 +62,8 @@
         </ul>
       </nav>
       
-      <!-- Authentication Section -->
       <div class="auth-section">
         <ng-container *ngIf="authService.isLoggedIn$ | async; else loggedOutTemplate">
-          <!-- Logged in state -->
           <div class="user-menu">
             <span class="welcome-text">Welcome back!</span>
 <button 
@@ -69,7 +78,6 @@
           </div>
         </ng-container>
         
-        <!-- Logged out state -->
         <ng-template #loggedOutTemplate>
           <div class="auth-buttons">
             <button 
@@ -91,7 +99,6 @@
         </ng-template>
       </div>
       
-      <!-- Mobile menu button -->
       <button class="mobile-menu-btn" aria-label="Open mobile menu" aria-expanded="false">
         <span class="hamburger-line"></span>
         <span class="hamburger-line"></span>

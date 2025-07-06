@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Booking } from "../models/";
 import { sendBookingConfirmationEmail } from "../utils/email";
 import { 
@@ -10,9 +11,6 @@ import {
 } from "../utils/booking-helpers";
 import type { AuthenticatedRequest, CreateBookingBody } from "../types";
 
-/**
- * Get available time slots for a restaurant on a specific date
- */
 export const getAvailability = async (
     req: Request,
     res: Response
@@ -41,7 +39,11 @@ export const getAvailability = async (
         }
 
         const timeSlots = TimeHelper.generateTimeSlots(openingHours.open, openingHours.close);
-        const existingBookings = await BookingDatabase.getExistingBookings(restaurantId, date);
+        const existingBookings = await Booking.find({
+            restaurantId,
+            date,
+            status: { $in: ['confirmed', 'pending'] }
+        });
 
         const bookingCounts: { [key: string]: number } = {};
         existingBookings.forEach(booking => {
@@ -89,9 +91,6 @@ export const getAvailability = async (
     }
 };
 
-/**
- * Create a new booking
- */
 export const createBooking = async (
     req: AuthenticatedRequest,
     res: Response
@@ -123,28 +122,48 @@ export const createBooking = async (
             );
         }
 
-        const existingBookings = await BookingDatabase.getExistingBookings(restaurantId, date, time);
-        const availableCapacity = TimeHelper.calculateAvailableCapacity(restaurant, existingBookings);
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        let booking: any;
 
-        if (availableCapacity < guests) {
-            return ResponseHelper.sendConflictError(res, 
-                `Not enough capacity available. Available: ${availableCapacity}, Requested: ${guests}`
-            );
+        try {
+            const existingBookings = await Booking.find({
+                restaurantId,
+                date,
+                time,
+                status: { $in: ['confirmed', 'pending'] }
+            }).session(session);
+
+            const bookedGuests = existingBookings.reduce((total, booking) => total + booking.guests, 0);
+            const availableCapacity = restaurant.capacity - bookedGuests;
+
+            if (availableCapacity < guests) {
+                await session.abortTransaction();
+                return ResponseHelper.sendConflictError(res, 
+                    `This time slot is fully booked. Available capacity: ${availableCapacity}, Requested: ${guests}`
+                );
+            }
+
+            booking = new Booking({
+                customerId,
+                restaurantId,
+                date,
+                time,
+                guests,
+                specialRequests: specialRequests?.trim() || undefined,
+                status: 'confirmed'
+            });
+
+            await booking.save({ session });
+            await session.commitTransaction();
+            await sendConfirmationEmail(user.email, booking, restaurant.name, specialRequests);
+
+        } catch (transactionError) {
+            await session.abortTransaction();
+            throw transactionError;
+        } finally {
+            session.endSession();
         }
-
-        const booking = new Booking({
-            customerId,
-            restaurantId,
-            date,
-            time,
-            guests,
-            specialRequests: specialRequests?.trim() || undefined,
-            status: 'confirmed'
-        });
-
-        await booking.save();
-
-        await sendConfirmationEmail(user.email, booking, restaurant.name, specialRequests);
 
         res.status(201).json({
             message: "Booking created successfully",
@@ -168,9 +187,6 @@ export const createBooking = async (
     }
 };
 
-/**
- * Get a booking by ID (only if user owns it)
- */
 export const getBookingById = async (
     req: AuthenticatedRequest,
     res: Response
@@ -202,9 +218,6 @@ export const getBookingById = async (
     }
 };
 
-/**
- * Cancel a booking (change status to cancelled)
- */
 export const cancelBooking = async (
     req: AuthenticatedRequest,
     res: Response
@@ -278,6 +291,102 @@ async function sendConfirmationEmail(
         });
     }
 }
+
+export const getUserBookings = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    try {
+        const customerId = req.user.id;
+        const { status, dateFrom, dateTo } = req.query as { 
+            status?: string; 
+            dateFrom?: string; 
+            dateTo?: string; 
+        };
+
+        const filter: any = { customerId };
+        if (status && status !== 'all') filter.status = status;
+        if (dateFrom || dateTo) {
+            filter.date = {};
+            if (dateFrom) filter.date.$gte = dateFrom;
+            if (dateTo) filter.date.$lte = dateTo;
+        }
+
+        const bookings = await Booking.find(filter)
+            .populate('restaurantId', 'name')
+            .sort({ createdAt: -1 });
+
+        const formattedBookings = bookings.map(booking => ({
+            id: booking._id,
+            customerId: booking.customerId,
+            restaurantId: booking.restaurantId._id,
+            restaurantName: (booking.restaurantId as any).name,
+            date: booking.date,
+            time: booking.time,
+            guests: booking.guests,
+            specialRequests: booking.specialRequests,
+            status: booking.status,
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt
+        }));
+
+        res.json(formattedBookings);
+
+    } catch (error) {
+        console.error("Get user bookings error:", error);
+        handleBookingError(res, error);
+    }
+};
+
+export const getBookingStats = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    try {
+        const customerId = req.user.id;
+        const now = new Date();
+        const todayString = now.toISOString().split('T')[0];
+
+        const [
+            totalBookings,
+            upcomingBookings,
+            completedBookings,
+            cancelledBookings
+        ] = await Promise.all([
+            Booking.countDocuments({ customerId }),
+            Booking.countDocuments({ 
+                customerId, 
+                status: 'confirmed',
+                $or: [
+                    { date: { $gt: todayString } },
+                    { 
+                        date: todayString,
+                        time: { $gt: now.toTimeString().slice(0, 5) }
+                    }
+                ]
+            }),
+            Booking.countDocuments({ 
+                customerId, 
+                status: { $in: ['completed'] }
+            }),
+            Booking.countDocuments({ 
+                customerId, 
+                status: 'cancelled' 
+            })
+        ]);
+
+        res.json({
+            totalBookings,
+            upcomingBookings,
+            completedBookings,
+            cancelledBookings
+        });
+
+    } catch (error) {
+        console.error("Get booking stats error:", error);
+        handleBookingError(res, error);
+    }
+};
 
 function handleBookingError(res: Response, error: any): void {
     if (error instanceof Error) {
