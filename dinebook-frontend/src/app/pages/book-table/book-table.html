@@ -1,0 +1,228 @@
+<div class="book-table-page">
+  <div class="container">
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-text">
+          <h1 class="page-title">Book Your Table</h1>
+          <p class="page-description">
+            Reserve your perfect dining experience in just a few simple steps.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="booking-content">
+      <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()" class="booking-form">
+        <div class="form-section">
+          <div class="section-header">
+            <div class="step-number">1</div>
+            <h2 class="section-title">Choose Restaurant</h2>
+          </div>
+          
+          <mat-card class="form-card">
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Select Restaurant</mat-label>
+                <mat-select formControlName="restaurantId" [disabled]="isLoading">
+                  <mat-option value="">Choose a restaurant</mat-option>
+                  <mat-option *ngFor="let restaurant of restaurants" [value]="restaurant.id">
+                    <div class="restaurant-option">
+                      <div class="restaurant-info">
+                        <span class="restaurant-name">{{ restaurant.name }}</span>
+                        <span class="restaurant-details">{{ restaurant.cuisine }} • {{ restaurant.location }}</span>
+                      </div>
+                      <div class="restaurant-rating">
+                        <span>{{ restaurant.rating || restaurant.averageRating || 0 }}</span>
+                      </div>
+                    </div>
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="bookingForm.get('restaurantId')?.hasError('required') && bookingForm.get('restaurantId')?.touched">
+                  Please select a restaurant
+                </mat-error>
+              </mat-form-field>
+
+              <div *ngIf="selectedRestaurant" class="restaurant-preview">
+                <div class="preview-card">
+                  <div class="preview-info">
+                    <h3>{{ selectedRestaurant.name }}</h3>
+                    <p class="cuisine">{{ selectedRestaurant.cuisine }}</p>
+                    <div class="details">
+                      <div class="detail-item">
+                        <span>{{ selectedRestaurant.location }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span>{{ selectedRestaurant.timing }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span>{{ selectedRestaurant.rating || selectedRestaurant.averageRating || 0 }} ({{ selectedRestaurant.reviews || 0 }} reviews)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-section">
+          <div class="section-header">
+            <div class="step-number">2</div>
+            <h2 class="section-title">Select Date & Guests</h2>
+          </div>
+          
+          <mat-card class="form-card">
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>Reservation Date</mat-label>
+                  <input matInput [matDatepicker]="picker" formControlName="date"
+                         [min]="minDate" [max]="maxDate" [matDatepickerFilter]="dateFilter">
+                  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                  <mat-error *ngIf="bookingForm.get('date')?.hasError('required') && bookingForm.get('date')?.touched">
+                    Please select a date
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="guests-field">
+                  <mat-label>Number of Guests</mat-label>
+                  <mat-select formControlName="guests">
+                    <mat-option *ngFor="let num of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]" [value]="num">
+                      {{ num }} {{ num === 1 ? 'Guest' : 'Guests' }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="bookingForm.get('guests')?.hasError('required') && bookingForm.get('guests')?.touched">
+                    Please select number of guests
+                  </mat-error>
+                  <mat-error *ngIf="bookingForm.get('guests')?.hasError('min') && bookingForm.get('guests')?.touched">
+                    Minimum 1 guest required
+                  </mat-error>
+                  <mat-error *ngIf="bookingForm.get('guests')?.hasError('max') && bookingForm.get('guests')?.touched">
+                    Maximum 20 guests allowed
+                  </mat-error>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-section" *ngIf="bookingForm.get('restaurantId')?.value && bookingForm.get('date')?.value">
+          <div class="section-header">
+            <div class="step-number">3</div>
+            <h2 class="section-title">Choose Time</h2>
+          </div>
+          
+          <mat-card class="form-card">
+            <mat-card-content>
+              <div *ngIf="isLoading && (!availability)" class="loading-container">
+                <mat-spinner diameter="40"></mat-spinner>
+                <p>Checking availability...</p>
+              </div>
+
+              <div *ngIf="availability && !isLoading" class="availability-info">
+                <div class="availability-header">
+                  <h3>{{ availability.restaurantName }}</h3>
+                  <p class="date-info">{{ availability.date }} • {{ availability.dayOfWeek }}</p>
+                  <p class="hours-info">
+                    Open {{ availability.openingHours.open }} - {{ availability.openingHours.close }}
+                  </p>
+                </div>
+                <div class="time-slots-grid" *ngIf="availableSlots.length > 0; else noSlotsTemplate">
+                  <button
+                    type="button"
+                    *ngFor="let slot of availableSlots"
+                    class="time-slot"
+                    [class.selected]="selectedTimeSlot?.time === slot.time"
+                    [disabled]="!slot.available"
+                    (click)="selectTimeSlot(slot)">
+                    <span class="time">{{ slot.time }}</span>
+                    <span class="capacity">{{ slot.availableCapacity }} spots</span>
+                  </button>
+                </div>
+
+                <ng-template #noSlotsTemplate>
+                  <div class="no-slots">
+                    <h3>No Available Times</h3>
+                    <p>Unfortunately, there are no available time slots for the selected date. Please try a different date.</p>
+                  </div>
+                </ng-template>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-section" *ngIf="selectedTimeSlot">
+          <div class="section-header">
+            <div class="step-number">4</div>
+            <h2 class="section-title">Special Requests</h2>
+          </div>
+          
+          <mat-card class="form-card">
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Special Requests (Optional)</mat-label>
+                <textarea matInput formControlName="specialRequests" 
+                          placeholder="Dietary restrictions, celebration details, seating preferences..."
+                          rows="4"></textarea>
+                <mat-hint>{{ bookingForm.get('specialRequests')?.value?.length || 0 }}/500 characters</mat-hint>
+                <mat-error *ngIf="bookingForm.get('specialRequests')?.hasError('maxlength')">
+                  Special requests cannot exceed 500 characters
+                </mat-error>
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-section" *ngIf="selectedTimeSlot">
+          <div class="section-header">
+            <div class="step-number">5</div>
+            <h2 class="section-title">Confirm Booking</h2>
+          </div>
+          
+          <mat-card class="form-card summary-card">
+            <mat-card-content>
+              <div class="booking-summary">
+                <h3>Booking Summary</h3>
+                <div class="summary-details">
+                  <div class="summary-item">
+                    <span class="label">Restaurant:</span>
+                    <span class="value">{{ selectedRestaurant?.name }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Date:</span>
+                    <span class="value">{{ bookingForm.get('date')?.value | date:'fullDate' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Time:</span>
+                    <span class="value">{{ selectedTimeSlot.time }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Guests:</span>
+                    <span class="value">{{ bookingForm.get('guests')?.value }} {{ bookingForm.get('guests')?.value === 1 ? 'Guest' : 'Guests' }}</span>
+                  </div>
+                  <div class="summary-item" *ngIf="bookingForm.get('specialRequests')?.value">
+                    <span class="label">Special Requests:</span>
+                    <span class="value">{{ bookingForm.get('specialRequests')?.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" mat-button class="cancel-btn" routerLink="/restaurants">
+                  Cancel
+                </button>
+                <button type="submit" mat-raised-button color="primary" 
+                        class="submit-btn" [disabled]="!isFormValid || isSubmitting">
+                  <mat-spinner *ngIf="isSubmitting" diameter="20"></mat-spinner>
+                  {{ isSubmitting ? 'Booking...' : 'Confirm Booking' }}
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div> 

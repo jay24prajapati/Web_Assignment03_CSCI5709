@@ -1,6 +1,5 @@
 <div class="restaurants-page">
   <div class="container">
-    <!-- Page Header -->
     <div class="page-header">
       <div class="header-content">
         <div class="header-text">
@@ -18,7 +17,6 @@
       </div>
     </div>
     
-    <!-- Restaurants Grid -->
     <div class="restaurants-content">
       <div class="restaurants-grid">
         <div class="restaurant-card" *ngFor="let restaurant of mockRestaurants">
@@ -64,7 +62,7 @@
                 <mat-icon>menu_book</mat-icon>
                 View Menu
               </button>
-              <button mat-button class="view-menu-btn" (click)="bookTable()" class="book-btn">
+              <button mat-button class="view-menu-btn" (click)="bookTableForRestaurant(restaurant)" class="book-btn">
                 <mat-icon>event_available</mat-icon>
                 Book Table
               </button>
