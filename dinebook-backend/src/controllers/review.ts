@@ -26,6 +26,10 @@ export const createReview = async (
   res: Response
 ): Promise<void> => {
   try {
+    if (req.user.role !== 'customer') {
+      res.status(403).json({ error: "Only customers can create reviews" });
+      return;
+    }
     const { restaurantId, rating, comment } = req.body;
     const customerId = req.user.id;
 
@@ -50,7 +54,7 @@ export const createReview = async (
       return;
     }
 
-    // Check if customer has already reviewed this restaurant (handled by unique index)
+    // Check if customer has already reviewed this restaurant
     const existingReview = await Review.findOne({ customerId, restaurantId });
     if (existingReview) {
       res.status(400).json({ error: "You have already reviewed this restaurant" });
@@ -89,6 +93,10 @@ export const updateReview = async (
   res: Response
 ): Promise<void> => {
   try {
+    if (req.user.role !== 'customer') {
+      res.status(403).json({ error: "Only customers can update their reviews" });
+      return;
+    }
     const { id } = req.params;
     const { rating, comment } = req.body;
     const customerId = req.user.id;
@@ -133,6 +141,10 @@ export const deleteReview = async (
   res: Response
 ): Promise<void> => {
   try {
+    if (req.user.role !== 'customer') {
+      res.status(403).json({ error: "Only customers can delete their reviews" });
+      return;
+    }
     const { id } = req.params;
     const customerId = req.user.id;
 
@@ -191,6 +203,10 @@ export const replyToReview = async (
   res: Response
 ): Promise<void> => {
   try {
+    if (req.user.role !== 'owner') {
+      res.status(403).json({ error: "Only restaurant owners can reply to reviews" });
+      return;
+    }
     const { id } = req.params;
     const { reply } = req.body;
     const ownerId = req.user.id;
@@ -224,5 +240,113 @@ export const replyToReview = async (
   } catch (error) {
     console.error("Review reply error:", error);
     res.status(500).json({ error: "Failed to add reply" });
+  }
+};
+
+// Get all reviews by the authenticated customer
+export const getMyReviews = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (req.user.role !== 'customer') {
+      res.status(403).json({ error: "Only customers can view their reviews" });
+      return;
+    }
+    const customerId = req.user.id;
+    const reviews = await Review.find({ customerId })
+      .populate("restaurantId", "name")
+      .sort({ createdAt: -1 });
+    res.json({
+      reviews,
+    });
+  } catch (error) {
+    console.error("Fetch my reviews error:", error);
+    res.status(500).json({ error: "Failed to fetch reviews" });
+  }
+};
+
+// Update owner's reply to a review (owner only)
+export const updateReply = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (req.user.role !== 'owner') {
+      res.status(403).json({ error: "Only restaurant owners can update replies" });
+      return;
+    }
+    const { id } = req.params;
+    const { reply } = req.body;
+    const ownerId = req.user.id;
+
+    // Input validation
+    if (!reply || reply.trim() === "") {
+      res.status(400).json({ error: "Reply cannot be empty" });
+      return;
+    }
+
+    const review = await Review.findById(id).populate("restaurantId");
+
+    if (!review) {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+
+    const restaurant = review.restaurantId as any;
+    if (restaurant.ownerId.toString() !== ownerId) {
+      res.status(403).json({ error: "You don't have permission to update this reply" });
+      return;
+    }
+
+    review.ownerReply = reply;
+    await review.save();
+
+    res.json({
+      message: "Reply updated successfully",
+      review,
+    });
+  } catch (error) {
+    console.error("Reply update error:", error);
+    res.status(500).json({ error: "Failed to update reply" });
+  }
+};
+
+// Delete owner's reply to a review (owner only)
+export const deleteReply = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (req.user.role !== 'owner') {
+      res.status(403).json({ error: "Only restaurant owners can delete replies" });
+      return;
+    }
+    const { id } = req.params;
+    const ownerId = req.user.id;
+
+    const review = await Review.findById(id).populate("restaurantId");
+
+    if (!review) {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+
+    const restaurant = review.restaurantId as any;
+    if (restaurant.ownerId.toString() !== ownerId) {
+      res.status(403).json({ error: "You don't have permission to delete this reply" });
+      return;
+    }
+
+    review.ownerReply = '';
+    await review.save();
+
+    res.json({
+      message: "Reply deleted successfully",
+      review,
+    });
+  } catch (error) {
+    console.error("Reply deletion error:", error);
+    res.status(500).json({ error: "Failed to delete reply" });
   }
 };
