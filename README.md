@@ -126,29 +126,6 @@ These endpoints require authentication with an `owner` role and a valid JWT toke
   - `403 Forbidden`: Not the restaurant owner.
   - `404 Not Found`: Review not found.
 
-### Testing Instructions
-
-1. **Authentication**:
-
-   - Register via `/api/auth/register` and login via `/api/auth/login` to get a JWT token.
-   - Use the token in the `Authorization` header (e.g., `Bearer <token>`).
-
-2. **Customer Testing**:
-
-   - **Create Review**: `POST /api/reviews/` with the JSON above.
-   - **Update Review**: `PUT /api/reviews/:id` with the JSON above.
-   - **Delete Review**: `DELETE /api/reviews/:id`.
-   - **Get My Reviews**: `GET /api/reviews/my-reviews`.
-
-3. **Public Testing**:
-
-   - **Get Reviews**: `GET /api/reviews/restaurant/:restaurantId`.
-
-4. **Owner Testing**:
-   - **Reply to Review**: `POST /api/reviews/:id/reply` with the JSON above.
-   - **Update Reply**: `PUT /api/reviews/:id/reply` with the JSON above.
-   - **Delete Reply**: `DELETE /api/reviews/:id/reply`.
-
 ### Notes
 
 - Customers can only manage their own reviews.
