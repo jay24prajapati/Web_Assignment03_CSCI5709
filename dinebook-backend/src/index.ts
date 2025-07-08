@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import restaurantRoutes from './routes/restaurant';
 import bookingRoutes from './routes/booking';
+import reviewRoutes from './routes/review';
 import mongoose from 'mongoose';
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes); 
 
 // Basic route
 app.get('/', (req, res) => {
