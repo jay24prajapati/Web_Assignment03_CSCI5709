@@ -18,8 +18,43 @@
     </div>
     
     <div class="restaurants-content">
-      <div class="restaurants-grid">
-        <div class="restaurant-card" *ngFor="let restaurant of mockRestaurants">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state">
+        <div class="loading-spinner">
+          <mat-icon class="spinning">refresh</mat-icon>
+        </div>
+        <p>Loading restaurants...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error && !loading" class="error-state">
+        <div class="error-content">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <h3>Oops! Something went wrong</h3>
+          <p>{{ error }}</p>
+          <button mat-raised-button color="primary" (click)="retry()">
+            <mat-icon>refresh</mat-icon>
+            Try Again
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!loading && !error && restaurants.length === 0" class="empty-state">
+        <div class="empty-content">
+          <mat-icon class="empty-icon">restaurant</mat-icon>
+          <h3>No Restaurants Found</h3>
+          <p>We couldn't find any restaurants at the moment. Please check back later or try refreshing the page.</p>
+          <button mat-raised-button color="primary" (click)="retry()">
+            <mat-icon>refresh</mat-icon>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Restaurants Grid -->
+      <div *ngIf="!loading && !error && restaurants.length > 0" class="restaurants-grid">
+        <div class="restaurant-card" *ngFor="let restaurant of restaurants">
             
           <div class="restaurant-image">
             <img src="https://cdn.pixabay.com/photo/2019/09/12/15/21/resort-4471852_1280.jpg" alt="Rooftop Restaurant" />
@@ -36,7 +71,7 @@
             <div class="restaurant-header">
                 
               <h3 class="restaurant-name">{{ restaurant.name }}</h3>
-              <span class="price-indicator">{{ restaurant.priceRange }}</span>
+              <span class="price-indicator">{{ restaurant.priceRangeDisplay }}</span>
             </div>
             <p class="restaurant-cuisine">{{ restaurant.cuisine }}</p>
             <div class="restaurant-rating">
@@ -45,7 +80,7 @@
                   {{ star }}
                 </mat-icon>
               </div>
-              <span class="rating-text">{{ restaurant.rating }} ({{ restaurant.reviews }} reviews)</span>
+              <span class="rating-text">{{ (restaurant.rating || restaurant.averageRating || 0) | number:'1.1-1' }} ({{ restaurant.reviews || 0 }} reviews)</span>
             </div>
             <div class="restaurant-details">
               <div class="detail-item">
@@ -54,7 +89,7 @@
               </div>
               <div class="detail-item">
                 <mat-icon class="detail-icon">access_time</mat-icon>
-                <span>{{ restaurant.timing }}</span>
+                <span>{{ restaurant.timing || 'Hours vary' }}</span>
               </div>
             </div>
             <div class="restaurant-actions">

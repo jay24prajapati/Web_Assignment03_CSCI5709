@@ -463,3 +463,94 @@
     }
   }
 }
+
+// Loading, Error, and Empty States
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 300px;
+}
+
+.loading-state {
+  .loading-spinner {
+    margin-bottom: 1rem;
+    
+    .spinning {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: var(--primary-500);
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  p {
+    color: var(--gray-600);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+}
+
+.error-state,
+.empty-state {
+  .error-content,
+  .empty-content {
+    max-width: 400px;
+  }
+  
+  .error-icon,
+  .empty-icon {
+    font-size: 4rem;
+    width: 4rem;
+    height: 4rem;
+    color: var(--gray-400);
+    margin-bottom: 1rem;
+  }
+  
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.5rem;
+  }
+  
+  p {
+    color: var(--gray-600);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 2rem;
+  }
+  
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+  }
+}
+
+.error-state {
+  .error-icon {
+    color: var(--error-500);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
