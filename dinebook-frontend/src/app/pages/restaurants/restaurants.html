@@ -16,6 +16,77 @@
         </div>
       </div>
     </div>
+
+    <!-- Search and Filters Section -->
+    <div class="search-filters-section">
+      <form [formGroup]="searchForm" class="search-filters-form">
+        <!-- Search Bar -->
+        <div class="search-bar">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search by location</mat-label>
+            <input matInput 
+                   formControlName="location" 
+                   placeholder="e.g., Downtown, Halifax, etc." 
+                   type="text">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Cuisine Type</mat-label>
+            <mat-select formControlName="cuisine">
+              <mat-option value="">All Cuisines</mat-option>
+              <mat-option *ngFor="let cuisine of cuisineOptions" [value]="cuisine">
+                {{ cuisine }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Price Range</mat-label>
+            <mat-select formControlName="priceRange">
+              <mat-option value="">All Prices</mat-option>
+              <mat-option *ngFor="let option of priceRangeOptions" [value]="option.value">
+                {{ option.icon }} {{ option.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-button 
+                  type="button" 
+                  (click)="clearFilters()" 
+                  class="clear-filters-btn"
+                  *ngIf="getActiveFilterKeys().length > 0">
+            <mat-icon>clear</mat-icon>
+            Clear Filters
+          </button>
+        </div>
+      </form>
+
+      <!-- Active Filters Display -->
+      <div class="active-filters" *ngIf="getActiveFilterKeys().length > 0">
+        <span class="filters-label">Active filters:</span>
+        <mat-chip-listbox class="filters-chips">
+          <mat-chip-option 
+            *ngFor="let filterKey of getActiveFilterKeys()" 
+            (removed)="removeFilter(filterKey)"
+            class="filter-chip">
+            {{ filterKey }}: {{ getFilterDisplayValue(filterKey) }}
+            <mat-icon matChipRemove>cancel</mat-icon>
+          </mat-chip-option>
+        </mat-chip-listbox>
+      </div>
+
+      <!-- Results Summary -->
+      <div class="results-summary" *ngIf="!loading && !error">
+        <p>
+          Showing {{ restaurants.length }} of {{ totalRestaurants }} restaurants
+          <span *ngIf="getActiveFilterKeys().length > 0"> with current filters</span>
+        </p>
+      </div>
+    </div>
     
     <div class="restaurants-content">
       <!-- Loading State -->
@@ -104,6 +175,19 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Pagination -->
+      <div *ngIf="!loading && !error && restaurants.length > 0 && totalRestaurants > pageSize" class="pagination-section">
+        <mat-paginator 
+          [length]="totalRestaurants"
+          [pageSize]="pageSize"
+          [pageIndex]="currentPage"
+          [pageSizeOptions]="[2, 4, 6, 10]"
+          [showFirstLastButtons]="true"
+          (page)="onPageChange($event)"
+          aria-label="Select page of restaurants">
+        </mat-paginator>
       </div>
       
       <div class="cta-section">

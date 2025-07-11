@@ -55,12 +55,27 @@ export class BookingService {
     return throwError(() => new Error(errorMessage));
   }
 
-  getRestaurants(): Observable<Restaurant[]> {
-    return this.http.get<Restaurant[]>(`${this.apiUrl}/restaurants`)
+  getRestaurants(params?: {
+    location?: string;
+    cuisine?: string;
+    priceRange?: string;
+    page?: string;
+    limit?: string;
+  }): Observable<{ restaurants: Restaurant[], pagination: any, filters: any }> {
+    let httpParams = new HttpParams();
+
+    if (params) {
+      if (params.location) httpParams = httpParams.set('location', params.location);
+      if (params.cuisine) httpParams = httpParams.set('cuisine', params.cuisine);
+      if (params.priceRange) httpParams = httpParams.set('priceRange', params.priceRange);
+      if (params.page) httpParams = httpParams.set('page', params.page);
+      if (params.limit) httpParams = httpParams.set('limit', params.limit);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/restaurants`, { params: httpParams })
       .pipe(
         map((response: any) => {
           console.log('API Response:', response);
-
 
           let restaurants: Restaurant[] = [];
           if (Array.isArray(response)) {
@@ -74,13 +89,19 @@ export class BookingService {
             throw new Error('Invalid response format from server');
           }
 
-          return restaurants.map(restaurant => ({
+          const transformedRestaurants = restaurants.map(restaurant => ({
             ...restaurant,
             id: restaurant._id,
             rating: restaurant.averageRating || 0,
             timing: this.formatOpeningHours(restaurant.openingHours),
             reviews: 0
           }));
+
+          return {
+            restaurants: transformedRestaurants,
+            pagination: response.pagination || { page: 1, limit: 10, total: restaurants.length, pages: 1 },
+            filters: response.filters || {}
+          };
         }),
         catchError(this.handleError)
       );

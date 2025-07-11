@@ -2,10 +2,17 @@ import { Component, OnInit } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { MatButtonModule } from "@angular/material/button"
 import { MatIconModule } from "@angular/material/icon"
+import { MatInputModule } from "@angular/material/input"
+import { MatSelectModule } from "@angular/material/select"
+import { MatFormFieldModule } from "@angular/material/form-field"
+import { MatChipsModule } from "@angular/material/chips"
+import { MatPaginatorModule, PageEvent } from "@angular/material/paginator"
+import { ReactiveFormsModule, FormBuilder, FormGroup } from "@angular/forms"
 import { Router, RouterLink } from "@angular/router"
 import { AuthService } from "../../services/auth.service"
 import { BookingService } from "../../services/booking.service"
 import { Restaurant } from "../../models/booking"
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 
 interface RestaurantDisplay extends Restaurant {
   badge: string
@@ -17,7 +24,18 @@ interface RestaurantDisplay extends Restaurant {
 @Component({
   selector: "app-restaurants",
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, RouterLink],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    MatInputModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    MatChipsModule,
+    MatPaginatorModule,
+    ReactiveFormsModule,
+    RouterLink
+  ],
   templateUrl: "./restaurants.html",
   styleUrl: "./restaurants.scss",
 })
@@ -26,25 +44,85 @@ export class RestaurantsComponent implements OnInit {
   loading = false
   error: string | null = null
 
+  // Filter and pagination properties
+  searchForm: FormGroup
+  currentPage = 0
+  pageSize = 2  // Smaller page size for testing with current data
+  totalRestaurants = 0
+  totalPages = 0
+
+  // Filter options
+  cuisineOptions = [
+    'Italian', 'Indian', 'Chinese', 'Mexican', 'American',
+    'Thai', 'Japanese', 'Mediterranean', 'French', 'Other'
+  ]
+
+  priceRangeOptions = [
+    { value: '1', label: '$10-20', icon: '$' },
+    { value: '2', label: '$20-40', icon: '$$' },
+    { value: '3', label: '$40-60', icon: '$$$' },
+    { value: '4', label: '$60+', icon: '$$$$' }
+  ]
+
+  // Active filters for display
+  activeFilters: { location?: string, cuisine?: string, priceRange?: string } = {}
+
   constructor(
     private authService: AuthService,
     private router: Router,
-    private bookingService: BookingService
-  ) { }
+    private bookingService: BookingService,
+    private fb: FormBuilder
+  ) {
+    this.searchForm = this.fb.group({
+      location: [''],
+      cuisine: [''],
+      priceRange: ['']
+    })
+  }
 
   ngOnInit() {
     this.loadRestaurants()
+    this.setupFormSubscriptions()
+  }
+
+  setupFormSubscriptions() {
+    // Subscribe to form changes with debounce for search
+    this.searchForm.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(() => {
+        this.currentPage = 0 // Reset to first page when filters change
+        this.loadRestaurants()
+      })
   }
 
   loadRestaurants() {
     this.loading = true
     this.error = null
 
-    this.bookingService.getRestaurants().subscribe({
-      next: (restaurants) => {
-        this.restaurants = restaurants.map(restaurant => this.transformRestaurant(restaurant))
+    const formValues = this.searchForm.value
+    this.activeFilters = {
+      ...(formValues.location && { location: formValues.location }),
+      ...(formValues.cuisine && { cuisine: formValues.cuisine }),
+      ...(formValues.priceRange && { priceRange: formValues.priceRange })
+    }
+
+    const params = {
+      ...this.activeFilters,
+      page: (this.currentPage + 1).toString(),
+      limit: this.pageSize.toString()
+    }
+
+    this.bookingService.getRestaurants(params).subscribe({
+      next: (response) => {
+        this.restaurants = response.restaurants.map(restaurant => this.transformRestaurant(restaurant))
+        this.totalRestaurants = response.pagination.total
+        this.totalPages = response.pagination.pages
         this.loading = false
         console.log('Loaded restaurants:', this.restaurants)
+        console.log('Pagination:', response.pagination)
       },
       error: (error) => {
         console.error('Error loading restaurants:', error)
@@ -58,6 +136,7 @@ export class RestaurantsComponent implements OnInit {
 
         this.loading = false
         this.restaurants = []
+        this.totalRestaurants = 0
       }
     })
   }
@@ -144,5 +223,45 @@ export class RestaurantsComponent implements OnInit {
 
   retry() {
     this.loadRestaurants()
+  }
+
+  // Pagination methods
+  onPageChange(event: PageEvent) {
+    this.currentPage = event.pageIndex
+    this.pageSize = event.pageSize
+    this.loadRestaurants()
+  }
+
+  // Filter methods
+  clearFilters() {
+    this.searchForm.reset()
+    this.activeFilters = {}
+    this.currentPage = 0
+    this.loadRestaurants()
+  }
+
+  removeFilter(filterType: string) {
+    this.searchForm.patchValue({ [filterType]: '' })
+  }
+
+  getActiveFilterKeys(): string[] {
+    return Object.keys(this.activeFilters)
+  }
+
+  getFilterDisplayValue(key: string): string {
+    const value = this.activeFilters[key as keyof typeof this.activeFilters]
+    if (!value) return ''
+
+    switch (key) {
+      case 'priceRange':
+        const priceOption = this.priceRangeOptions.find(option => option.value === value)
+        return priceOption ? priceOption.label : value
+      case 'location':
+        return value
+      case 'cuisine':
+        return value
+      default:
+        return value
+    }
   }
 }

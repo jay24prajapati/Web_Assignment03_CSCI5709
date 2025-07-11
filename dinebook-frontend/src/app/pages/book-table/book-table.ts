@@ -45,7 +45,7 @@ export class BookTableComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   minDate = new Date();
   maxDate = new Date();
-  
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -81,8 +81,8 @@ export class BookTableComponent implements OnInit, OnDestroy {
     this.bookingService.getRestaurants()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (restaurants) => {
-          this.restaurants = restaurants;
+        next: (response) => {
+          this.restaurants = response.restaurants;
           this.setLoading(false);
         },
         error: () => {
@@ -97,7 +97,7 @@ export class BookTableComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(this.destroy$),
         debounceTime(500),
-        distinctUntilChanged((prev, curr) => 
+        distinctUntilChanged((prev, curr) =>
           prev.restaurantId === curr.restaurantId && prev.date === curr.date
         )
       )
@@ -117,7 +117,7 @@ export class BookTableComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(queryParams => {
         if (queryParams['restaurantName']) {
-          const matchingRestaurant = this.restaurants.find(r => 
+          const matchingRestaurant = this.restaurants.find(r =>
             r.name === queryParams['restaurantName']
           );
           if (matchingRestaurant) {
@@ -155,7 +155,7 @@ export class BookTableComponent implements OnInit, OnDestroy {
 
   selectTimeSlot(slot: TimeSlot): void {
     if (!slot.available) return;
-    
+
     this.selectedTimeSlot = slot;
     this.bookingForm.get('time')?.setValue(slot.time);
   }
@@ -168,7 +168,7 @@ export class BookTableComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     this.bookingForm.disable();
-    
+
     const formValue = this.bookingForm.value;
     const bookingRequest: CreateBookingRequest = {
       restaurantId: formValue.restaurantId,
@@ -184,10 +184,10 @@ export class BookTableComponent implements OnInit, OnDestroy {
         next: (booking) => {
           this.showSuccess('Booking confirmed! Redirecting to your bookings...');
           setTimeout(() => {
-            this.router.navigate(['/my-bookings'], { 
-              queryParams: { 
+            this.router.navigate(['/my-bookings'], {
+              queryParams: {
                 newBooking: booking.id,
-                message: 'Your booking has been confirmed!' 
+                message: 'Your booking has been confirmed!'
               }
             });
           }, 1000);
@@ -196,11 +196,11 @@ export class BookTableComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
           this.bookingForm.enable();
           this.checkAvailability();
-          
+
           const errorMessage = error.message?.includes('Not enough capacity') || error.message?.includes('fully booked')
             ? 'Sorry, this time slot was just booked by someone else. Please select another time.'
             : error.message || 'Failed to create booking. Please try again.';
-          
+
           this.showError(errorMessage);
         }
       });
