@@ -4,6 +4,7 @@ import { SignInComponent } from './pages/sign-in/sign-in';
 import { SignUpComponent } from './pages/sign-up/sign-up';
 import { VerifyComponent } from './pages/verify/verify';
 import { DashboardComponent } from './pages/dashboard/dashboard';
+import { OwnerDashboardComponent } from './pages/owner-dashboard/owner-dashboard';
 import { RestaurantsComponent } from './pages/restaurants/restaurants';
 import { AboutComponent } from './pages/about/about';
 import { ContactComponent } from './pages/contact/contact';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'sign-up', component: SignUpComponent },
   { path: 'verify', component: VerifyComponent },
   { path: 'dashboard', component: DashboardComponent },
+  { path: 'owner/dashboard', component: OwnerDashboardComponent },
   { path: 'restaurants', component: RestaurantsComponent },
   { path: 'book-table', component: BookTableComponent },
   { path: 'book-table/:restaurantId', component: BookTableComponent },
