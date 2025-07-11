@@ -221,6 +221,10 @@ export class RestaurantsComponent implements OnInit {
     }
   }
 
+  viewRestaurantDetails(restaurant: RestaurantDisplay) {
+    this.router.navigate(['/restaurants', restaurant._id]);
+  }
+
   retry() {
     this.loadRestaurants()
   }
