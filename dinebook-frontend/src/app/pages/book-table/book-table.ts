@@ -8,9 +8,10 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
 import { BookingService } from '../../services/booking.service';
@@ -29,9 +30,9 @@ import { Restaurant, AvailabilityResponse, TimeSlot, CreateBookingRequest } from
     MatNativeDateModule,
     MatButtonModule,
     MatCardModule,
+    MatIconModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule,
-    RouterLink
+    MatSnackBarModule
   ],
   templateUrl: './book-table.html',
   styleUrls: ['./book-table.scss']
@@ -45,6 +46,17 @@ export class BookTableComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   minDate = new Date();
   maxDate = new Date();
+
+  // Store preselected restaurant info from navigation
+  preselectedRestaurant: {
+    id: string;
+    name: string;
+    cuisine?: string;
+    location?: string;
+    capacity?: number;
+    priceRange?: number;
+    source?: string;
+  } | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -116,12 +128,50 @@ export class BookTableComponent implements OnInit, OnDestroy {
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe(queryParams => {
-        if (queryParams['restaurantName']) {
+        // First try to use the restaurantId directly if available
+        if (queryParams['restaurantId']) {
+          this.bookingForm.patchValue({ restaurantId: queryParams['restaurantId'] });
+
+          // Store preselected restaurant information
+          this.preselectedRestaurant = {
+            id: queryParams['restaurantId'],
+            name: queryParams['restaurantName'] || 'Selected Restaurant',
+            cuisine: queryParams['cuisine'],
+            location: queryParams['location'],
+            capacity: queryParams['capacity'] ? parseInt(queryParams['capacity']) : undefined,
+            priceRange: queryParams['priceRange'] ? parseInt(queryParams['priceRange']) : undefined,
+            source: queryParams['source'] || 'unknown'
+          };
+
+          // Adjust guest limit based on restaurant capacity if available
+          if (this.preselectedRestaurant.capacity) {
+            const maxGuests = Math.min(this.preselectedRestaurant.capacity, 20);
+            this.bookingForm.get('guests')?.setValidators([
+              Validators.required,
+              Validators.min(1),
+              Validators.max(maxGuests)
+            ]);
+            this.bookingForm.get('guests')?.updateValueAndValidity();
+          }
+
+          // Show a success message indicating the restaurant has been preselected
+          let message = `Restaurant "${this.preselectedRestaurant.name}" has been preselected for your booking`;
+          if (this.preselectedRestaurant.cuisine) {
+            message += ` (${this.preselectedRestaurant.cuisine} cuisine)`;
+          }
+
+          this.snackBar.open(message, 'Close', {
+            duration: 4000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom'
+          });
+        } else if (queryParams['restaurantName']) {
+          // Fallback to finding restaurant by name
           const matchingRestaurant = this.restaurants.find(r =>
             r.name === queryParams['restaurantName']
           );
           if (matchingRestaurant) {
-            this.bookingForm.patchValue({ restaurantId: matchingRestaurant.id });
+            this.bookingForm.patchValue({ restaurantId: matchingRestaurant._id || matchingRestaurant.id });
           }
         }
       });
@@ -271,5 +321,20 @@ export class BookTableComponent implements OnInit, OnDestroy {
   private resetTimeSelection(): void {
     this.selectedTimeSlot = null;
     this.bookingForm.get('time')?.setValue('');
+  }
+
+  // Clear preselected restaurant and show dropdown
+  clearPreselection(): void {
+    this.preselectedRestaurant = null;
+    this.bookingForm.patchValue({ restaurantId: '' });
+    this.resetAvailability();
+
+    // Reset guest validation to default
+    this.bookingForm.get('guests')?.setValidators([
+      Validators.required,
+      Validators.min(1),
+      Validators.max(20)
+    ]);
+    this.bookingForm.get('guests')?.updateValueAndValidity();
   }
 } 
