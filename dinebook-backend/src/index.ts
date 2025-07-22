@@ -22,7 +22,7 @@ const port = process.env.PORT || 3000;
 
 const allowedOrigins = [
   'http://localhost:4200',
-  'https://web-assignment03-git-dbbe36-jayspprajapati24-gmailcoms-projects.vercel.app'
+  'https://web-assignment03-csci-5709.vercel.app'
 ];
 
 // Middleware
