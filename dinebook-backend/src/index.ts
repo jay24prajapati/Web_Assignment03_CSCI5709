@@ -20,9 +20,26 @@ mongoose.connect(MONGODB_URI)
 const app = express();
 const port = process.env.PORT || 3000;
 
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://web-assignment03-git-dbbe36-jayspprajapati24-gmailcoms-projects.vercel.app'
+];
+
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
+app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
