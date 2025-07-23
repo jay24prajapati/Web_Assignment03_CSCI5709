@@ -8,17 +8,19 @@ import { MatChipsModule } from '@angular/material/chips';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { Restaurant } from '../../models/booking';
+import { OptimizedImageComponent } from "../../components/optimized-image/optimized-image.component";
 
 @Component({
     selector: 'app-restaurant-detail',
     standalone: true,
     imports: [
-        CommonModule,
-        MatButtonModule,
-        MatIconModule,
-        MatCardModule,
-        MatChipsModule
-    ],
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatChipsModule,
+    OptimizedImageComponent
+],
     templateUrl: './restaurant-detail.html',
     styleUrl: './restaurant-detail.scss',
 })

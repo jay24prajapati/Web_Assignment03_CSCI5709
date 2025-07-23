@@ -13,6 +13,7 @@ import { AuthService } from "../../services/auth.service"
 import { BookingService } from "../../services/booking.service"
 import { Restaurant } from "../../models/booking"
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
+import { OptimizedImageComponent } from "../../components/optimized-image/optimized-image.component";
 
 interface RestaurantDisplay extends Restaurant {
   badge: string
@@ -34,8 +35,9 @@ interface RestaurantDisplay extends Restaurant {
     MatChipsModule,
     MatPaginatorModule,
     ReactiveFormsModule,
-    RouterLink
-  ],
+    RouterLink,
+    OptimizedImageComponent
+],
   templateUrl: "./restaurants.html",
   styleUrl: "./restaurants.scss",
 })
