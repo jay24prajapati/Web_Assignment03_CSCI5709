@@ -30,7 +30,8 @@ export class BookingValidators {
 
             return requestedMinutes >= openMinutes && requestedMinutes < closeMinutes;
         } catch (e) {
-            console.error("Time format error:", e.message);
+            const err = e as Error;
+            console.error("Time format error:", err.message);
             return false;
         }
     }
