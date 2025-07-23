@@ -23,16 +23,27 @@ export class BookingValidators {
     }
 
     static isTimeWithinHours(time: string, openTime: string, closeTime: string): boolean {
-        const [reqHour, reqMinute] = time.split(':').map(Number);
-        const [openHour, openMinute] = openTime.split(':').map(Number);
-        const [closeHour, closeMinute] = closeTime.split(':').map(Number);
+        try {
+            const requestedMinutes = this.parseTimeToMinutes(time);
+            const openMinutes = this.parseTimeToMinutes(openTime);
+            const closeMinutes = this.parseTimeToMinutes(closeTime);
 
-        const requestedMinutes = reqHour * 60 + reqMinute;
-        const openMinutes = openHour * 60 + openMinute;
-        const closeMinutes = closeHour * 60 + closeMinute;
-
-        return requestedMinutes >= openMinutes && requestedMinutes < closeMinutes;
+            return requestedMinutes >= openMinutes && requestedMinutes < closeMinutes;
+        } catch (e) {
+            console.error("Time format error:", e.message);
+            return false;
+        }
     }
+    
+    static parseTimeToMinutes(timeStr: string): number {
+        const date = new Date(`1970-01-01T${timeStr}`);
+        if (isNaN(date.getTime())) {
+            throw new Error(`Invalid time format: ${timeStr}`);
+        }
+        return date.getHours() * 60 + date.getMinutes();
+    }
+
+
 }
 
 // Response utilities
