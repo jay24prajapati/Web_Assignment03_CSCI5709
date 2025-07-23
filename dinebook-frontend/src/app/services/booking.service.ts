@@ -17,7 +17,7 @@ import {
   providedIn: 'root'
 })
 export class BookingService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://web-assignment03-csci5709.onrender.com/api';
   private bookingsSubject = new BehaviorSubject<BookingResponse[]>([]);
   public bookings$ = this.bookingsSubject.asObservable();
 
