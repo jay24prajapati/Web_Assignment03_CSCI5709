@@ -1,24 +1,18 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-@Injectable({
-    providedIn: 'root'
-})
-export class OwnerGuard implements CanActivate {
-
-    constructor(private authService: AuthService, private router: Router) { }
-
-    canActivate(
-        route: ActivatedRouteSnapshot,
-        state: RouterStateSnapshot
-    ): boolean {
-        if (this.authService.isLoggedIn && this.authService.isOwner()) {
-            return true;
-        } else {
-            // Not logged in or not an owner, redirect to sign-in
-            this.router.navigate(['/sign-in'], { queryParams: { returnUrl: state.url } });
-            return false;
-        }
-    }
-}
+export const OwnerGuard: CanActivateFn = (
+  route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot
+): boolean => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  
+  if (authService.isLoggedIn && authService.isOwner()) {
+    return true;
+  } else {
+    router.navigate(['/sign-in'], { queryParams: { returnUrl: state.url } });
+    return false;
+  }
+};

@@ -1,26 +1,21 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-@Injectable({
-    providedIn: 'root'
-})
-export class PublicGuard implements CanActivate {
-
-    constructor(private authService: AuthService, private router: Router) { }
-
-    canActivate(): boolean {
-        if (!this.authService.isLoggedIn) {
-            return true;
-        } else if (this.authService.isLoggedIn && this.authService.isOwner()) {
-            this.router.navigate(['/owner/dashboard']);
-            return false;
-        } else if (this.authService.isLoggedIn && this.authService.isCustomer()) {
-            this.router.navigate(['/dashboard']);
-            return false;
-        } else {
-            this.router.navigate(['/']);
-            return false;
-        }
-    }
-}
+export const PublicGuard: CanActivateFn = (): boolean => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  
+  if (!authService.isLoggedIn) {
+    return true;
+  } else if (authService.isLoggedIn && authService.isOwner()) {
+    router.navigate(['/owner/dashboard']);
+    return false;
+  } else if (authService.isLoggedIn && authService.isCustomer()) {
+    router.navigate(['/dashboard']);
+    return false;
+  } else {
+    router.navigate(['/']);
+    return false;
+  }
+};
