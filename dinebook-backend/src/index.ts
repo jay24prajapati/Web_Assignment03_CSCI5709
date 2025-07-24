@@ -75,13 +75,38 @@ const allowedOrigins = [
 // Security middleware to handle all HTTP methods and headers
 app.use((req, res, next) => {
   // Disable TRACE and TRACK methods
-  if (['TRACE', 'TRACK', 'OPTIONS'].includes(req.method)) {
-    res.status(405).json({ error: 'Method Not Allowed' });
+  if (['TRACE', 'TRACK'].includes(req.method)) {
+    res.status(405).end();
     return;
   }
   
+  // Handle OPTIONS for CORS but prevent fingerprinting
+  if (req.method === 'OPTIONS') {
+    if (req.headers['access-control-request-method']) {
+      return next();
+    } else {
+      res.status(405).end();
+      return;
+    }
+  }
   res.removeHeader('X-Powered-By');
   res.setHeader('Server', 'WebServer');
+  
+  // Add security headers to all responses
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  
+  // Set cache control for API routes
+  if (req.url.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   
   next();
 });
@@ -104,7 +129,15 @@ app.use(helmet({
       upgradeInsecureRequests: [],
     },
   },
-  crossOriginEmbedderPolicy: false,
+  crossOriginEmbedderPolicy: {
+    policy: "require-corp"
+  },
+  crossOriginOpenerPolicy: {
+    policy: "same-origin"
+  },
+  crossOriginResourcePolicy: {
+    policy: "same-origin"
+  },
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -115,19 +148,17 @@ app.use(helmet({
 // Permissions Policy header
 app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 
-    'geolocation=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(), payment=()');
+    'geolocation=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(), payment=(), usb=(), bluetooth=(), midi=(), accelerometer=(), ambient-light-sensor=()');
   next();
 });
 
 // security headers for static files
-app.use((req, res, next) => {
+app.use('/api', (req, res, next) => {
   res.setHeader('Content-Security-Policy', 
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; upgrade-insecure-requests;");
-  
-  if (req.url.includes('/robots.txt') || req.url.includes('/sitemap.xml')) {
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-  }
-  
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; upgrade-insecure-requests;");
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   next();
 });
 
@@ -135,6 +166,8 @@ app.get('/robots.txt', (req, res) => {
   res.type('text/plain');
   res.setHeader('Content-Security-Policy', 
     "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
+  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.send('User-agent: *\nDisallow: /api/\nAllow: /');
 });
 
@@ -142,6 +175,8 @@ app.get('/sitemap.xml', (req, res) => {
   res.type('application/xml');
   res.setHeader('Content-Security-Policy', 
     "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
+  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
 });
 
@@ -188,7 +223,9 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -206,7 +243,7 @@ const cacheMiddleware = (duration: number) => {
       const cachedResponse = await redisClient.get(key);
       if (cachedResponse) {
         res.set('X-Cache', 'HIT');
-        res.set('Cache-Control', 'public, max-age=300');
+        res.set('Cache-Control', 'private, max-age=300');
         return res.json(JSON.parse(cachedResponse));
       }
     } catch (error) {
@@ -218,7 +255,7 @@ const cacheMiddleware = (duration: number) => {
         redisClient.setEx(key, duration, JSON.stringify(data)).catch(console.error);
       }
       res.set('X-Cache', 'MISS');
-      res.set('Cache-Control', 'public, max-age=' + duration);
+      res.set('Cache-Control', 'private, max-age=' + duration);
       return originalJson(data);
     };
 
@@ -234,17 +271,28 @@ app.use('/api/reviews', apiLimiter, cacheMiddleware(600), reviewRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
   res.json({ message: 'Welcome to DineBook Backend!', version: '1.0.0' });
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     redis: redisConnected ? 'connected' : 'disconnected'
   });
+});
+
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 // Start server
