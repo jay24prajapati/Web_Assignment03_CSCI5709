@@ -90,10 +90,15 @@ app.use(compression({
   threshold: 1024,
 }));
 
+
+// Environment rate limit
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isDevelopment ? 10000000 : 100, // High limit for testing
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -104,7 +109,7 @@ app.use(limiter);
 // API-specific rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: isDevelopment ? 10000000 : 200, // High limit for testing
   message: 'Too many API requests, please try again later.',
 });
 
