@@ -103,7 +103,7 @@ app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   
-    // Set cache control for API route
+  // Set cache control for API route
   if (req.url.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
     res.setHeader('Pragma', 'no-cache');
@@ -336,15 +336,15 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 const originalSend = express.response.send;
-express.response.send = function(this: Response, ...args: any[]) {
+express.response.send = function(this: Response, body?: any): Response {
   this.setHeader('Server', 'nginx/1.18.0');
-  return originalSend.apply(this, args);
+  return originalSend.call(this, body);
 };
 
 const originalJson = express.response.json;
-express.response.json = function(this: Response, ...args: any[]) {
+express.response.json = function(this: Response, body?: any): Response {
   this.setHeader('Server', 'nginx/1.18.0');
-  return originalJson.apply(this, args);
+  return originalJson.call(this, body);
 };
 
 // Start server
