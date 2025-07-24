@@ -72,40 +72,50 @@ const allowedOrigins = [
   'https://web-assignment03-csci-5709.vercel.app'
 ];
 
-// Security middleware to handle all HTTP methods and headers
+// Disable Express powered-by header
+app.disable('x-powered-by');
+
 app.use((req, res, next) => {
   // Disable TRACE and TRACK methods
-  if (['TRACE', 'TRACK'].includes(req.method)) {
-    res.status(405).end();
+  const blockedMethods = ['TRACE', 'TRACK', 'CONNECT'];
+  
+  if (blockedMethods.includes(req.method)) {
+    res.destroy();
     return;
   }
   
-  // Handle OPTIONS for CORS but prevent fingerprinting
+  // Handle OPTIONS
   if (req.method === 'OPTIONS') {
-    if (req.headers['access-control-request-method']) {
-      return next();
-    } else {
-      res.status(405).end();
+    if (!req.headers['access-control-request-method'] && !req.headers.origin) {
+      res.destroy();
       return;
     }
   }
   res.removeHeader('X-Powered-By');
-  res.setHeader('Server', 'WebServer');
+  res.removeHeader('Server');
   
-  // Add security headers to all responses
+  // Add security headers 
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '0'); // Disable to avoid fingerprinting
+  res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   
-  // Set cache control for API routes
+    // Set cache control for API route
   if (req.url.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+  }
+  
+  if (req.headers['max-forwards'] || 
+      req.headers['via'] || 
+      req.headers['x-forwarded-server'] ||
+      req.method === 'PATCH' && !req.url.startsWith('/api/')) {
+    res.status(400).end();
+    return;
   }
   
   next();
@@ -142,13 +152,20 @@ app.use(helmet({
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
-  }
+  },
+  hidePoweredBy: true,
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: false 
 }));
 
 // Permissions Policy header
 app.use((req, res, next) => {
+  res.setHeader('Server', 'nginx/1.18.0');
+  
   res.setHeader('Permissions-Policy', 
-    'geolocation=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(), payment=(), usb=(), bluetooth=(), midi=(), accelerometer=(), ambient-light-sensor=()');
+    'geolocation=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(), payment=(), usb=(), bluetooth=(), midi=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), gamepad=(), navigation-override=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), web-share=(), xr-spatial-tracking=()');
+  
   next();
 });
 
@@ -159,6 +176,7 @@ app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  res.setHeader('Server', 'nginx/1.18.0');
   next();
 });
 
@@ -168,6 +186,7 @@ app.get('/robots.txt', (req, res) => {
     "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
   res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Server', 'nginx/1.18.0');
   res.send('User-agent: *\nDisallow: /api/\nAllow: /');
 });
 
@@ -177,6 +196,7 @@ app.get('/sitemap.xml', (req, res) => {
     "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
   res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Server', 'nginx/1.18.0');
   res.send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
 });
 
@@ -199,9 +219,12 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isDevelopment ? 10000000 : 100, // High limit for testing
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
+  message: { error: 'Too many requests' }, 
+  standardHeaders: false,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({ error: 'Too many requests' });
+  }
 });
 
 app.use(limiter);
@@ -209,8 +232,14 @@ app.use(limiter);
 // API-specific rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDevelopment ? 10000000 : 200, // High limit for testing
-  message: 'Too many API requests, please try again later.',
+  max: isDevelopment ? 10000000 : 200,  // High limit for testing
+  message: { error: 'Too many API requests' },
+  standardHeaders: false,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.setHeader('Server', 'nginx/1.18.0');
+    res.status(429).json({ error: 'Too many API requests' });
+  }
 });
 
 // CORS configuration
@@ -219,18 +248,22 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn('Blocked by CORS:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf) => {
+  }
+}));
 
-// Cache middleware 
+// Cache middleware
 const cacheMiddleware = (duration: number) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET' || !redisConnected) {
@@ -244,11 +277,13 @@ const cacheMiddleware = (duration: number) => {
       if (cachedResponse) {
         res.set('X-Cache', 'HIT');
         res.set('Cache-Control', 'private, max-age=300');
+        res.setHeader('Server', 'nginx/1.18.0');
         return res.json(JSON.parse(cachedResponse));
       }
     } catch (error) {
       console.warn('Cache read error:', error);
     }
+    
     const originalJson = res.json.bind(res);
     res.json = (data: any) => {
       if (res.statusCode === 200 && redisConnected) {
@@ -256,6 +291,7 @@ const cacheMiddleware = (duration: number) => {
       }
       res.set('X-Cache', 'MISS');
       res.set('Cache-Control', 'private, max-age=' + duration);
+      res.setHeader('Server', 'nginx/1.18.0');
       return originalJson(data);
     };
 
@@ -272,12 +308,14 @@ app.use('/api/reviews', apiLimiter, cacheMiddleware(600), reviewRoutes);
 // Basic route
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Server', 'nginx/1.18.0');
   res.json({ message: 'Welcome to DineBook Backend!', version: '1.0.0' });
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Server', 'nginx/1.18.0');
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -287,13 +325,27 @@ app.get('/health', (req, res) => {
 });
 
 app.use('*', (req, res) => {
+  res.setHeader('Server', 'nginx/1.18.0');
   res.status(404).json({ error: 'Not Found' });
 });
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('Unhandled error:', err);
+  res.setHeader('Server', 'nginx/1.18.0');
   res.status(500).json({ error: 'Internal Server Error' });
 });
+
+const originalSend = express.response.send;
+express.response.send = function(this: Response, ...args: any[]) {
+  this.setHeader('Server', 'nginx/1.18.0');
+  return originalSend.apply(this, args);
+};
+
+const originalJson = express.response.json;
+express.response.json = function(this: Response, ...args: any[]) {
+  this.setHeader('Server', 'nginx/1.18.0');
+  return originalJson.apply(this, args);
+};
 
 // Start server
 app.listen(port, () => {
@@ -302,7 +354,16 @@ app.listen(port, () => {
 });
 
 process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
+  console.log('Shutting down...');
+  await mongoose.connection.close();
+  if (redisConnected) {
+    await redisClient.quit();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down...');
   await mongoose.connection.close();
   if (redisConnected) {
     await redisClient.quit();
