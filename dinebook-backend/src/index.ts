@@ -72,30 +72,77 @@ const allowedOrigins = [
   'https://web-assignment03-csci-5709.vercel.app'
 ];
 
-// Disable TRACE and TRACK methods
+// Security middleware to handle all HTTP methods and headers
 app.use((req, res, next) => {
-  if (['TRACE', 'TRACK'].includes(req.method)) {
-    res.status(405).send('Method Not Allowed');
-  } else {
-    next();
+  // Disable TRACE and TRACK methods
+  if (['TRACE', 'TRACK', 'OPTIONS'].includes(req.method)) {
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
+  
+  res.removeHeader('X-Powered-By');
+  res.setHeader('Server', 'WebServer');
+  
+  next();
 });
 
-// Security middleware with custom CSP
+// Security headers with proper CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'none'"],
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
       frameAncestors: ["'none'"],
-      formAction: ["'none'"],
+      formAction: ["'self'"],
+      baseUri: ["'self'"],
+      upgradeInsecureRequests: [],
     },
   },
+  crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 
-// Set generic Server header
+// Permissions Policy header
 app.use((req, res, next) => {
-  res.setHeader('Server', 'WebServer');
+  res.setHeader('Permissions-Policy', 
+    'geolocation=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(), payment=()');
   next();
+});
+
+// security headers for static files
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; upgrade-insecure-requests;");
+  
+  if (req.url.includes('/robots.txt') || req.url.includes('/sitemap.xml')) {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+  
+  next();
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
+  res.send('User-agent: *\nDisallow: /api/\nAllow: /');
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.type('application/xml');
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'none'; frame-ancestors 'none'; form-action 'none';");
+  res.send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
 });
 
 // Compression middleware
