@@ -44,7 +44,6 @@ redisClient.connect()
     redisConnected = false;
   });
 
-
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dinebook';
 console.log('Connecting to MongoDB:', MONGODB_URI);
 
@@ -73,6 +72,15 @@ const allowedOrigins = [
   'https://web-assignment03-csci-5709.vercel.app'
 ];
 
+// Disable TRACE and TRACK methods
+app.use((req, res, next) => {
+  if (['TRACE', 'TRACK'].includes(req.method)) {
+    res.status(405).send('Method Not Allowed');
+  } else {
+    next();
+  }
+});
+
 // Security middleware with custom CSP
 app.use(helmet({
   contentSecurityPolicy: {
@@ -83,6 +91,12 @@ app.use(helmet({
     },
   },
 }));
+
+// Set generic Server header
+app.use((req, res, next) => {
+  res.setHeader('Server', 'WebServer');
+  next();
+});
 
 // Compression middleware
 app.use(compression({
@@ -96,10 +110,8 @@ app.use(compression({
   threshold: 1024,
 }));
 
-
 // Environment rate limit
 const isDevelopment = process.env.NODE_ENV !== 'production';
-
 
 // Rate limiting
 const limiter = rateLimit({
