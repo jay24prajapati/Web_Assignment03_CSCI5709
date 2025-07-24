@@ -4,18 +4,21 @@ export const bookingSchema = new mongoose.Schema({
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, 'Customer ID is required']
+        required: [true, 'Customer ID is required'],
+        index: true
     },
     restaurantId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Restaurant',
-        required: [true, 'Restaurant ID is required']
+        required: [true, 'Restaurant ID is required'],
+        index: true
     },
     date: {
         type: String,
         required: [true, 'Booking date is required'],
         trim: true,
-        match: [/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format']
+        match: [/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'],
+        index: true
     },
     time: {
         type: String,
@@ -37,13 +40,16 @@ export const bookingSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['confirmed', 'pending', 'cancelled', 'completed'],
-        default: 'confirmed'
+        default: 'confirmed',
+        index: true
     }
 }, {
     timestamps: true
 });
 
-bookingSchema.index({ customerId: 1, createdAt: -1 });
-bookingSchema.index({ restaurantId: 1, date: 1, time: 1 });
+bookingSchema.index({ customerId: 1, createdAt: -1 }); 
+bookingSchema.index({ restaurantId: 1, date: 1, time: 1, status: 1 });
+bookingSchema.index({ date: 1, status: 1 }); 
+bookingSchema.index({ restaurantId: 1, status: 1, date: 1 }); 
 
 export const Booking = mongoose.model('Booking', bookingSchema); 

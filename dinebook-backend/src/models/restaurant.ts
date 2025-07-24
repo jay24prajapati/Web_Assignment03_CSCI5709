@@ -3,23 +3,27 @@ import mongoose from 'mongoose';
 export const restaurantSchema = new mongoose.Schema({
     _averageRating: {
         type: Number,
-        default: 0
+        default: 0,
+        index: true 
     },
     name: {
         type: String,
         required: [true, 'Restaurant name is required'],
         trim: true,
-        maxlength: [100, 'Restaurant name cannot exceed 100 characters']
+        maxlength: [100, 'Restaurant name cannot exceed 100 characters'],
+        index: true
     },
     cuisine: {
         type: String,
         required: [true, 'Cuisine type is required'],
-        enum: ['Italian', 'Indian', 'Chinese', 'Mexican', 'American', 'Thai', 'Japanese', 'Mediterranean', 'French', 'Other']
+        enum: ['Italian', 'Indian', 'Chinese', 'Mexican', 'American', 'Thai', 'Japanese', 'Mediterranean', 'French', 'Other'],
+        index: true 
     },
     location: {
         type: String,
         required: [true, 'Location is required'],
-        trim: true
+        trim: true,
+        index: true 
     },
     coordinates: {
         type: {
@@ -42,7 +46,8 @@ export const restaurantSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Price range is required'],
         min: [1, 'Price range must be between 1-4'],
-        max: [4, 'Price range must be between 1-4']
+        max: [4, 'Price range must be between 1-4'],
+        index: true
     },
     ownerId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -77,11 +82,16 @@ export const restaurantSchema = new mongoose.Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: true,
+        index: true
     }
 }, {
     timestamps: true
 });
+
+restaurantSchema.index({ isActive: 1, cuisine: 1, priceRange: 1 });
+restaurantSchema.index({ isActive: 1, location: 1, _averageRating: -1 });
+restaurantSchema.index({ name: 'text', location: 'text' }); // Text search index
 
 restaurantSchema.virtual('averageRating').get(function () {
     return this._averageRating || 0;

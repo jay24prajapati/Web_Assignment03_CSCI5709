@@ -1,11 +1,7 @@
 import { Request, Response } from "express";
 import { Restaurant } from "../models/";
-
 import type { AuthenticatedRequest, RestaurantQueryParams, CreateRestaurantBody } from "../types";
 
-/**
- * Get all restaurants with optional filtering and pagination
- */
 export const getRestaurants = async (
     req: Request<{}, {}, {}, RestaurantQueryParams>,
     res: Response
@@ -19,13 +15,16 @@ export const getRestaurants = async (
             limit = "10",
             lat,
             lng,
-            radius = "10", // Default 10km radius
+            radius = "10",
         } = req.query;
 
         const filter: any = { isActive: true };
-        let aggregationPipeline: any[] = [];
+        let query;
+        let total;
 
-        // Location-based search using coordinates
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const limitNum = parseInt(limit);
+
         if (lat && lng) {
             const latitude = parseFloat(lat);
             const longitude = parseFloat(lng);
@@ -36,57 +35,40 @@ export const getRestaurants = async (
                 return;
             }
 
-            // Use MongoDB geospatial query
-            aggregationPipeline.push({
-                $geoNear: {
-                    near: {
-                        type: "Point",
-                        coordinates: [longitude, latitude] // GeoJSON uses [lng, lat]
-                    },
-                    distanceField: "distance",
-                    maxDistance: radiusInKm * 1000, // Convert to meters
-                    spherical: true
+            // Aggregation pipeline for geospatial queries
+            const pipeline: any[] = [
+                {
+                    $geoNear: {
+                        near: {
+                            type: "Point",
+                            coordinates: [longitude, latitude]
+                        },
+                        distanceField: "distance",
+                        maxDistance: radiusInKm * 1000,
+                        spherical: true,
+                        query: { isActive: true }
+                    }
                 }
-            });
+            ];
 
-            // Add the active filter
-            aggregationPipeline.push({ $match: { isActive: true } });
-        } else {
-            // Text-based location search (existing functionality)
-            if (location) {
-                filter.location = { $regex: location, $options: "i" };
+            // Filters to pipeline
+            if (cuisine) {
+                pipeline.push({ $match: { cuisine: cuisine } });
             }
-        }
-
-        // Add other filters
-        if (cuisine) {
-            const cuisineFilter = { cuisine: cuisine };
-            if (aggregationPipeline.length > 0) {
-                aggregationPipeline.push({ $match: cuisineFilter });
-            } else {
-                filter.cuisine = cuisine;
+            if (priceRange) {
+                pipeline.push({ $match: { priceRange: parseInt(priceRange) } });
             }
-        }
 
-        if (priceRange) {
-            const priceFilter = { priceRange: parseInt(priceRange) };
-            if (aggregationPipeline.length > 0) {
-                aggregationPipeline.push({ $match: priceFilter });
-            } else {
-                filter.priceRange = parseInt(priceRange);
-            }
-        }
+            // Get total count
+            const countPipeline = [...pipeline, { $count: "total" }];
+            const countResult = await Restaurant.aggregate(countPipeline);
+            total = countResult[0]?.total || 0;
 
-        let restaurants;
-        let total;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        if (aggregationPipeline.length > 0) {
-            // Use aggregation pipeline for geospatial search
-            aggregationPipeline.push(
-                { $sort: lat && lng ? { distance: 1 } : { name: 1 } },
+            // Pagination and lookup
+            pipeline.push(
+                { $sort: { distance: 1 } },
                 { $skip: skip },
-                { $limit: parseInt(limit) },
+                { $limit: limitNum },
                 {
                     $lookup: {
                         from: "users",
@@ -99,31 +81,44 @@ export const getRestaurants = async (
                 { $unwind: { path: "$ownerId", preserveNullAndEmptyArrays: true } }
             );
 
-            restaurants = await Restaurant.aggregate(aggregationPipeline);
-
-            // Get total count for pagination
-            const countPipeline = aggregationPipeline.slice(0, -3); // Remove sort, skip, limit, lookup, unwind
-            countPipeline.push({ $count: "total" });
-            const countResult = await Restaurant.aggregate(countPipeline);
-            total = countResult[0]?.total || 0;
+            query = Restaurant.aggregate(pipeline);
         } else {
-            // Use regular find for text-based search
-            restaurants = await Restaurant.find(filter)
-                .populate("ownerId", "name email")
-                .sort({ name: 1 })
-                .skip(skip)
-                .limit(parseInt(limit));
+            // Optimize regular queries with proper indexing
+            const findFilter = { ...filter };
 
-            total = await Restaurant.countDocuments(filter);
+            if (location) {
+                // Text search for better performance
+                findFilter.$text = { $search: location };
+            }
+            if (cuisine) {
+                findFilter.cuisine = cuisine;
+            }
+            if (priceRange) {
+                findFilter.priceRange = parseInt(priceRange);
+            }
+
+            // Use lean() for better performance and select only needed fields
+            query = Restaurant.find(findFilter)
+                .populate("ownerId", "name email")
+                .select("-__v") 
+                .lean()
+                .sort(location ? { score: { $meta: "textScore" } } : { name: 1 })
+                .skip(skip)
+                .limit(limitNum);
+
+            // Optimized count query
+            total = await Restaurant.countDocuments(findFilter);
         }
+
+        const restaurants = await query;
 
         res.json({
             restaurants,
             pagination: {
                 page: parseInt(page),
-                limit: parseInt(limit),
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / parseInt(limit)),
+                pages: Math.ceil(total / limitNum),
             },
             filters: { location, cuisine, priceRange, lat, lng, radius },
         });
@@ -133,18 +128,16 @@ export const getRestaurants = async (
     }
 };
 
-/**
- * Get a single restaurant by ID
- */
 export const getRestaurantById = async (
     req: Request<{ id: string }>,
     res: Response
 ): Promise<void> => {
     try {
-        const restaurant = await Restaurant.findById(req.params.id).populate(
-            "ownerId",
-            "name email"
-        );
+        // Use lean() and select only needed fields
+        const restaurant = await Restaurant.findById(req.params.id)
+            .populate("ownerId", "name email")
+            .select("-__v")
+            .lean();
 
         if (!restaurant) {
             res.status(404).json({ error: "Restaurant not found" });
@@ -156,6 +149,8 @@ export const getRestaurantById = async (
             return;
         }
 
+        // Set cache headers
+        res.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
         res.json(restaurant);
     } catch (error) {
         console.error("Restaurant fetch error:", error);
@@ -169,9 +164,6 @@ export const getRestaurantById = async (
     }
 };
 
-/**
- * Create a new restaurant
- */
 export const createRestaurant = async (
     req: AuthenticatedRequest & Request<{}, {}, CreateRestaurantBody>,
     res: Response
