@@ -10,6 +10,7 @@ import restaurantRoutes from './routes/restaurant';
 import bookingRoutes from './routes/booking';
 import reviewRoutes from './routes/review';
 import mongoose from 'mongoose';
+import { register, metricsMiddleware, updateDatabaseMetrics, updateRedisMetrics } from './metrics/prometheus';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ const redisClient = createClient({
     reconnectStrategy: (retries) => {
       if (retries > 3) {
         console.log('Redis connection failed after 3 attempts, disabling cache');
+        updateRedisMetrics(false);
         return false; 
       }
       return Math.min(retries * 50, 500);
@@ -30,6 +32,7 @@ const redisClient = createClient({
 redisClient.on('error', (err) => {
   console.log('Redis unavailable, continuing without cache');
   redisConnected = false;
+  updateRedisMetrics(false);
 });
 
 // Connect to Redis with limited retries
@@ -38,10 +41,12 @@ redisClient.connect()
   .then(() => {
     console.log('Connected to Redis');
     redisConnected = true;
+    updateRedisMetrics(true);
   })
   .catch((error) => {
     console.log('Redis unavailable, caching disabled');
     redisConnected = false;
+    updateRedisMetrics(false);
   });
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dinebook';
@@ -61,8 +66,27 @@ mongoose.connect(MONGODB_URI, {
   w: 'majority',
   appName: 'DineBook-API'
 })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('MongoDB connection error:', error));
+  .then(() => {
+    console.log('Connected to MongoDB');
+    updateDatabaseMetrics(true);
+  })
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+    updateDatabaseMetrics(false);
+  });
+
+// Monitor MongoDB connection status
+mongoose.connection.on('connected', () => {
+  updateDatabaseMetrics(true);
+});
+
+mongoose.connection.on('disconnected', () => {
+  updateDatabaseMetrics(false);
+});
+
+mongoose.connection.on('error', () => {
+  updateDatabaseMetrics(false);
+});
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -74,6 +98,8 @@ const allowedOrigins = [
 
 // Disable Express powered-by header
 app.disable('x-powered-by');
+
+app.use(metricsMiddleware);
 
 app.use((req, res, next) => {
   // Disable TRACE and TRACK methods
@@ -178,6 +204,16 @@ app.use('/api', (req, res, next) => {
   res.setHeader('Expires', '0');
   res.setHeader('Server', 'nginx/1.18.0');
   next();
+});
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (ex) {
+    res.status(500).end(ex);
+  }
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -351,6 +387,7 @@ express.response.json = function(this: Response, body?: any): Response {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   console.log(`Access the API at http://localhost:${port}`);
+  console.log(`Metrics available at http://localhost:${port}/metrics`);
 });
 
 process.on('SIGINT', async () => {
